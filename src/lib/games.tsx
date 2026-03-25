@@ -15,6 +15,16 @@ const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max 
 
 const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
 
+const renderFraction = (n: number | string, d: number | string, extra?: string) => (
+  <div className="flex items-center justify-center gap-4 text-5xl sm:text-6xl font-black drop-shadow-xl text-white my-4">
+    <div className="flex flex-col items-center">
+      <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">{n}</span>
+      <span className="px-3 pt-2 leading-none">{d}</span>
+    </div>
+    {extra && <span className="text-3xl sm:text-4xl text-white/90 font-bold">{extra}</span>}
+  </div>
+);
+
 const generateNumOptions = (answer: number, variance: number, allowNegative: boolean = false): number[] => {
   const options = new Set<number>([answer]);
   while (options.size < 4) {
@@ -224,7 +234,7 @@ export const games: GameDef[] = [
       const answer = numerator * mult;
       
       return {
-        text: `${numerator}/${denominator} de ${base}`,
+        component: renderFraction(numerator, denominator, `de ${base}`),
         answer,
         options: generateNumOptions(answer, mult, false)
       };
@@ -246,11 +256,10 @@ export const games: GameDef[] = [
       const answer = Math.pow(base, exp);
       
       return {
-        text: `${base} ^ ${exp}`,
         component: (
-          <div className="flex items-start justify-center text-6xl font-black tracking-tighter drop-shadow-lg gap-2">
-            <span>{base}</span>
-            <span className="text-4xl mt-1">{exp}</span>
+          <div className="flex items-start justify-center text-6xl font-black tracking-tighter drop-shadow-lg gap-2 mt-4 mb-4">
+            <span className="text-7xl">{base}</span>
+            <span className="text-4xl mt-1 text-white/90">{exp}</span>
           </div>
         ),
         answer,
@@ -334,7 +343,7 @@ export const games: GameDef[] = [
         let wrong = (randomInt(1, d-1) / d) + (Math.random() > 0.5 ? 0 : 0.1);
         if (wrong !== answer && wrong > 0) options.add(parseFloat(wrong.toFixed(3)));
       }
-      return { text: `${n}/${d}`, answer, options: shuffle(Array.from(options)) };
+      return { component: renderFraction(n, d), answer, options: shuffle(Array.from(options)) };
     }
   },
   {
@@ -377,7 +386,9 @@ export const games: GameDef[] = [
         let wrongP = p + randomInt(-20, 20);
         if (wrongP > 0 && wrongP !== p) options.add(`${wrongP}/100`);
       }
-      return { text: `${p}%`, answer, options: shuffle(Array.from(options)) };
+      return { text: `${p}%`, component: (
+        <div className="text-5xl font-black mb-4 drop-shadow-xl">{p}% = ?</div>
+      ), answer, options: shuffle(Array.from(options)) };
     }
   },
   {
@@ -398,7 +409,9 @@ export const games: GameDef[] = [
         let wrong = `${wp/wg}/${100/wg}`;
         if (wrong !== answer) options.add(wrong);
       }
-      return { text: `${p}%`, answer, options: shuffle(Array.from(options)) };
+      return { text: `${p}%`, component: (
+        <div className="text-5xl font-black mb-4 drop-shadow-xl">{p}% = ?</div>
+      ), answer, options: shuffle(Array.from(options)) };
     }
 
   }

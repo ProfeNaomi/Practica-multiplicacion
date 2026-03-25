@@ -1,16 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, Star, Clock, Trophy, Play, RotateCcw, ArrowLeft, LogOut, ListOrdered, X } from 'lucide-react';
+import { Heart, Star, Clock, Trophy, Play, RotateCcw, ArrowLeft, LogOut, ListOrdered, X, Settings } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { sounds } from './lib/sounds';
 import { games } from './lib/games';
 import { GameDef, Question } from './lib/types';
+import { collection, query, where, getDocs, addDoc, orderBy, limit } from 'firebase/firestore';
+import { db } from './lib/firebase';
 
 type AuthMode = 'login' | 'register';
-type GameState = 'auth' | 'menu' | 'start' | 'playing' | 'gameover' | 'scores';
+type GameState = 'auth' | 'menu' | 'start' | 'playing' | 'gameover' | 'scores' | 'settings';
 
 const MAX_LIVES = 3;
-const TIME_LIMIT = 7;
 const QUESTIONS_PER_LEVEL = 5;
 
 export default function App() {
@@ -27,7 +28,8 @@ export default function App() {
   const [lives, setLives] = useState(MAX_LIVES);
   const [level, setLevel] = useState(1);
   const [streak, setStreak] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(TIME_LIMIT);
+  const [timeLimit, setTimeLimit] = useState(7);
+  const [timeLeft, setTimeLeft] = useState(timeLimit);
   const [question, setQuestion] = useState<Question | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<number | string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
@@ -45,30 +47,55 @@ export default function App() {
       setCurrentUser(savedUser);
       setGameState('menu');
     }
+    const savedTime = localStorage.getItem('calculo_mental_time');
+    if (savedTime) {
+      setTimeLimit(Number(savedTime));
+    }
   }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError('');
-    const endpoint = authMode === 'login' ? '/api/login' : '/api/register';
     try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: usernameInput, password: passwordInput })
-      });
-      const data = await res.json();
-      if (data.success) {
-        localStorage.setItem('calculo_mental_user', data.username);
-        setCurrentUser(data.username);
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('username', '==', usernameInput));
+      const querySnapshot = await getDocs(q);
+      
+      if (authMode === 'login') {
+        if (querySnapshot.empty) {
+          setAuthError('El usuario no existe.');
+          return;
+        }
+        const userDoc = querySnapshot.docs[0].data();
+        if (userDoc.password !== passwordInput) {
+          setAuthError('Contraseña incorrecta.');
+          return;
+        }
+        localStorage.setItem('calculo_mental_user', usernameInput);
+        setCurrentUser(usernameInput);
         setGameState('menu');
         setUsernameInput('');
         setPasswordInput('');
       } else {
-        setAuthError(data.error || 'Error de autenticación');
+        // Register
+        if (!querySnapshot.empty) {
+          setAuthError('El usuario ya existe.');
+          return;
+        }
+        await addDoc(usersRef, {
+          username: usernameInput,
+          password: passwordInput,
+          createdAt: new Date().toISOString()
+        });
+        localStorage.setItem('calculo_mental_user', usernameInput);
+        setCurrentUser(usernameInput);
+        setGameState('menu');
+        setUsernameInput('');
+        setPasswordInput('');
       }
     } catch (err) {
-      setAuthError('Error de red al conectar con el servidor.');
+      console.error(err);
+      setAuthError('Error conectando a Firebase. Verifica tu configuración.');
     }
   };
 
@@ -78,10 +105,17 @@ export default function App() {
     setGameState('auth');
   };
 
+  const saveTimeLimit = (newTime: number) => {
+    setTimeLimit(newTime);
+    localStorage.setItem('calculo_mental_time', newTime.toString());
+  };
+
   const viewLeaderboard = async () => {
     try {
-      const res = await fetch('/api/scores');
-      const data = await res.json();
+      const scoresRef = collection(db, 'scores');
+      const q = query(scoresRef, orderBy('score', 'desc'), limit(50));
+      const querySnapshot = await getDocs(q);
+      const data = querySnapshot.docs.map(doc => doc.data());
       setLeaderboard(data);
       setGameState('scores');
     } catch (err) {
@@ -114,10 +148,10 @@ export default function App() {
   const nextQuestion = useCallback((currentLevel: number) => {
     if (!activeGame) return;
     setQuestion(activeGame.generateQuestion(currentLevel, historyRef.current));
-    setTimeLeft(TIME_LIMIT);
+    setTimeLeft(timeLimit);
     setSelectedAnswer(null);
     setIsCorrect(null);
-  }, [activeGame]);
+  }, [activeGame, timeLimit]);
 
   const handleAnswer = useCallback((answer: number | string) => {
     if (selectedAnswer !== null || !question || !activeGame) return;
@@ -151,16 +185,17 @@ export default function App() {
           setGameState('gameover');
           
           if (currentUser) {
-            fetch('/api/scores', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
+            try {
+              await addDoc(collection(db, 'scores'), {
                 username: currentUser,
                 gameId: activeGame.id,
                 score: score, 
-                level: level
-              })
-            }).catch(console.error);
+                level: level,
+                date: new Date().toISOString()
+              });
+            } catch (err) {
+              console.error('Error saving score:', err);
+            }
           }
         }
         return newLives;
@@ -199,77 +234,119 @@ export default function App() {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="max-w-md w-full bg-slate-800 rounded-3xl p-8 shadow-2xl border border-slate-700"
+          className="max-w-md w-full"
         >
-          <h1 className="text-3xl font-black mb-6 text-center bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
-            Calculo Mental
-          </h1>
-          
-          <div className="flex gap-4 mb-6">
+          <div className="bg-slate-800 rounded-3xl p-8 shadow-2xl border border-slate-700">
+            <h1 className="text-3xl font-black mb-6 text-center bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+              Calculo Mental
+            </h1>
+            
+            <div className="flex gap-4 mb-6">
+              <button 
+                className={`flex-1 py-2 font-bold rounded-lg transition-colors ${authMode === 'login' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300'}`}
+                onClick={() => { setAuthMode('login'); setAuthError(''); }}
+              >
+                Iniciar Sesión
+              </button>
+              <button 
+                className={`flex-1 py-2 font-bold rounded-lg transition-colors ${authMode === 'register' ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300'}`}
+                onClick={() => { setAuthMode('register'); setAuthError(''); }}
+              >
+                Registro
+              </button>
+            </div>
+
+            <form onSubmit={handleAuth} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-1">Nombre de Usuario</label>
+                <input 
+                  type="text" 
+                  value={usernameInput}
+                  onChange={e => setUsernameInput(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Tu usuario"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-1">Contraseña</label>
+                <input 
+                  type="password" 
+                  value={passwordInput}
+                  onChange={e => setPasswordInput(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="********"
+                  required
+                />
+              </div>
+              
+              {authError && <div className="text-red-400 text-sm font-medium">{authError}</div>}
+              
+              <button 
+                type="submit" 
+                className="w-full py-4 mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-xl font-bold text-lg shadow-lg"
+              >
+                {authMode === 'login' ? 'Entrar' : 'Crear Cuenta'}
+              </button>
+            </form>
+
+            <div className="mt-6 text-center">
+              <div className="flex items-center justify-center gap-4 mb-4">
+                <div className="h-px bg-slate-700 flex-1"></div>
+                <span className="text-slate-500 font-medium text-sm">O</span>
+                <div className="h-px bg-slate-700 flex-1"></div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentUser(null);
+                  setGameState('menu');
+                }}
+                className="w-full py-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-xl font-bold text-slate-300 transition-colors"
+              >
+                Jugar como Invitado
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {gameState === 'settings' && (
+        <motion.div
+           initial={{ opacity: 0, y: 20 }}
+           animate={{ opacity: 1, y: 0 }}
+           className="max-w-md w-full bg-slate-800 rounded-3xl p-8 shadow-2xl border border-slate-700"
+        >
+          <div className="flex items-center justify-between mb-8">
             <button 
-              className={`flex-1 py-2 font-bold rounded-lg transition-colors ${authMode === 'login' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300'}`}
-              onClick={() => { setAuthMode('login'); setAuthError(''); }}
+              onClick={() => setGameState('menu')}
+              className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors font-medium border border-slate-600"
             >
-              Iniciar Sesión
+              <ArrowLeft className="w-5 h-5" /> Volver
             </button>
-            <button 
-              className={`flex-1 py-2 font-bold rounded-lg transition-colors ${authMode === 'register' ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300'}`}
-              onClick={() => { setAuthMode('register'); setAuthError(''); }}
-            >
-              Registro
-            </button>
+            <h2 className="text-2xl font-bold text-center flex-1 pr-6">Configuración</h2>
           </div>
 
-          <form onSubmit={handleAuth} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1">Nombre de Usuario</label>
+          <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-700 shadow-inner">
+            <div className="mb-4">
+              <label className="flex justify-between items-center text-lg font-bold mb-2">
+                <span>Tiempo Límite (Segundos)</span>
+                <span className="bg-indigo-600 text-white px-3 py-1 rounded-lg shadow-md">{timeLimit}s</span>
+              </label>
+              <p className="text-sm text-slate-400 mb-6">Ajusta cuánto tiempo tienes para responder cada pregunta. (Mínimo 4s, Máximo 10s).</p>
               <input 
-                type="text" 
-                value={usernameInput}
-                onChange={e => setUsernameInput(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Tu usuario"
-                required
+                type="range" 
+                min="4" 
+                max="10" 
+                value={timeLimit}
+                onChange={(e) => saveTimeLimit(Number(e.target.value))}
+                className="w-full h-3 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
               />
+              <div className="flex justify-between text-xs font-bold text-slate-500 mt-2">
+                <span>4s</span>
+                <span>10s</span>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1">Contraseña</label>
-              <input 
-                type="password" 
-                value={passwordInput}
-                onChange={e => setPasswordInput(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="********"
-                required
-              />
-            </div>
-            
-            {authError && <div className="text-red-400 text-sm font-medium">{authError}</div>}
-            
-            <button 
-              type="submit" 
-              className="w-full py-4 mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-xl font-bold text-lg shadow-lg"
-            >
-              {authMode === 'login' ? 'Entrar' : 'Crear Cuenta'}
-            </button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <div className="flex items-center justify-center gap-4 mb-4">
-              <div className="h-px bg-slate-700 flex-1"></div>
-              <span className="text-slate-500 font-medium text-sm">O</span>
-              <div className="h-px bg-slate-700 flex-1"></div>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setCurrentUser(null);
-                setGameState('menu');
-              }}
-              className="w-full py-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-xl font-bold text-slate-300 transition-colors"
-            >
-              Jugar como Invitado
-            </button>
           </div>
         </motion.div>
       )}
@@ -331,28 +408,31 @@ export default function App() {
           className="max-w-5xl w-full"
         >
           {/* Header */}
-          <div className="flex flex-col sm:flex-row items-center justify-between mb-12 bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-lg gap-4">
+          <div className="flex flex-col md:flex-row items-center justify-between mb-8 bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-lg gap-4">
             <div className="text-xl font-bold">
               Hola, <span className="text-indigo-400">{currentUser || 'Invitado'}</span> 👋
             </div>
-            <div className="flex gap-3">
-              <button onClick={viewLeaderboard} className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl transition-colors font-medium text-sm sm:text-base">
-                <ListOrdered className="w-5 h-5" /> Puntajes
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <button onClick={() => setGameState('settings')} className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl transition-colors font-medium text-sm sm:text-base">
+                <Settings className="w-5 h-5 text-slate-300" /> Configuración
+              </button>
+              <button onClick={viewLeaderboard} className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl transition-colors font-medium text-sm sm:text-base">
+                <ListOrdered className="w-5 h-5 text-indigo-300" /> Puntajes
               </button>
               <button 
                 onClick={handleLogout} 
-                className="flex items-center gap-2 px-4 py-2 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 rounded-xl transition-colors font-medium text-sm sm:text-base"
+                className="flex items-center gap-2 px-3 py-2 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 rounded-xl transition-colors font-medium text-sm sm:text-base"
               >
                 <LogOut className="w-5 h-5" /> {currentUser ? 'Salir' : 'Volver'}
               </button>
             </div>
           </div>
 
-          <div className="text-center mb-10">
-            <h1 className="text-5xl font-black mb-4 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+          <div className="text-center mb-8">
+            <h1 className="text-5xl font-black mb-3 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
               Matemáticas Divertidas
             </h1>
-            <p className="text-xl text-slate-400">Selecciona un juego para comenzar a practicar</p>
+            <p className="text-lg text-slate-400">Selecciona un juego para comenzar a practicar</p>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
@@ -393,7 +473,7 @@ export default function App() {
                 >
                   <button 
                     onClick={backToMenu}
-                    className="absolute top-6 left-6 p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors"
+                    className="absolute top-6 left-6 p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
                   >
                     <ArrowLeft className="w-6 h-6" />
                   </button>
@@ -405,7 +485,7 @@ export default function App() {
                   </div>
                   <h1 className="text-4xl font-bold mb-4 tracking-tight drop-shadow-md">{activeGame.title}</h1>
                   <p className="text-lg text-white/90 mb-8 drop-shadow-sm leading-snug">
-                    {activeGame.description} ¡Tienes {TIME_LIMIT} segundos por pregunta!
+                    {activeGame.description} ¡Tienes {timeLimit} segundos por pregunta!
                   </p>
                   <button
                     onClick={startGame}
@@ -450,7 +530,7 @@ export default function App() {
                           animate={{ scale: i < lives ? 1 : 0.5, opacity: i < lives ? 1 : 0.3 }}
                         >
                           <Heart
-                            className={`w-6 h-6 ${i < lives ? 'text-red-400' : 'text-slate-300/50'}`}
+                            className={`w-5 h-5 sm:w-6 sm:h-6 ${i < lives ? 'text-red-400' : 'text-slate-300/50'}`}
                             fill="currentColor"
                           />
                         </motion.div>
@@ -467,18 +547,19 @@ export default function App() {
                       <motion.div
                         className={`h-full ${timeLeft <= 2 ? 'bg-red-500' : 'bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]'}`}
                         initial={{ width: '100%' }}
-                        animate={{ width: `${(timeLeft / TIME_LIMIT) * 100}%` }}
+                        animate={{ width: `${(timeLeft / timeLimit) * 100}%` }}
                         transition={{ duration: 1, ease: "linear" }}
                       />
                     </div>
                   </div>
 
-                  <div className="text-center mb-8 min-h-[120px] flex flex-col items-center justify-center">
+                  <div className="text-center mb-8 min-h-[140px] flex flex-col items-center justify-center">
                     {question.component ? (
                       <motion.div
                         key={`comp-${level}-${streak}`}
                         initial={{ y: -20, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
+                        className="flex flex-col items-center justify-center w-full"
                       >
                         {question.component}
                       </motion.div>
@@ -516,7 +597,7 @@ export default function App() {
                           whileTap={selectedAnswer === null ? { scale: 0.95 } : {}}
                           onClick={() => handleAnswer(opt)}
                           disabled={selectedAnswer !== null}
-                          className={`py-4 sm:py-6 rounded-2xl text-xl sm:text-3xl font-bold transition-all duration-200 border ${btnClass}`}
+                          className={`py-4 sm:py-5 rounded-2xl text-xl sm:text-3xl font-bold transition-all duration-200 border ${btnClass}`}
                         >
                           {opt}
                         </motion.button>
