@@ -1,19 +1,27 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, Star, Clock, Trophy, Play, RotateCcw, ArrowLeft } from 'lucide-react';
+import { Heart, Star, Clock, Trophy, Play, RotateCcw, ArrowLeft, LogOut, ListOrdered, X } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { sounds } from './lib/sounds';
 import { games } from './lib/games';
 import { GameDef, Question } from './lib/types';
 
-type GameState = 'menu' | 'start' | 'playing' | 'gameover';
+type AuthMode = 'login' | 'register';
+type GameState = 'auth' | 'menu' | 'start' | 'playing' | 'gameover' | 'scores';
 
 const MAX_LIVES = 3;
 const TIME_LIMIT = 7;
 const QUESTIONS_PER_LEVEL = 5;
 
 export default function App() {
-  const [gameState, setGameState] = useState<GameState>('menu');
+  const [gameState, setGameState] = useState<GameState>('auth');
+  const [authMode, setAuthMode] = useState<AuthMode>('login');
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
+  
+  const [usernameInput, setUsernameInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [authError, setAuthError] = useState('');
+
   const [activeGameId, setActiveGameId] = useState<string | null>(null);
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(MAX_LIVES);
@@ -24,10 +32,62 @@ export default function App() {
   const [selectedAnswer, setSelectedAnswer] = useState<number | string | null>(null);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+
   const timerRef = useRef<number | null>(null);
   const historyRef = useRef<Set<number>>(new Set());
 
   const activeGame = activeGameId ? games.find(g => g.id === activeGameId) : null;
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('calculo_mental_user');
+    if (savedUser) {
+      setCurrentUser(savedUser);
+      setGameState('menu');
+    }
+  }, []);
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    const endpoint = authMode === 'login' ? '/api/login' : '/api/register';
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: usernameInput, password: passwordInput })
+      });
+      const data = await res.json();
+      if (data.success) {
+        localStorage.setItem('calculo_mental_user', data.username);
+        setCurrentUser(data.username);
+        setGameState('menu');
+        setUsernameInput('');
+        setPasswordInput('');
+      } else {
+        setAuthError(data.error || 'Error de autenticación');
+      }
+    } catch (err) {
+      setAuthError('Error de red al conectar con el servidor.');
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('calculo_mental_user');
+    setCurrentUser(null);
+    setGameState('auth');
+  };
+
+  const viewLeaderboard = async () => {
+    try {
+      const res = await fetch('/api/scores');
+      const data = await res.json();
+      setLeaderboard(data);
+      setGameState('scores');
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const selectGame = (gameId: string) => {
     setActiveGameId(gameId);
@@ -63,9 +123,6 @@ export default function App() {
     if (selectedAnswer !== null || !question || !activeGame) return;
     
     setSelectedAnswer(answer);
-    
-    // In javascript, '10' === 10 is false, so let's convert safely for comparison if both look like numbers,
-    // actually our generic generators already keep types consistent.
     const correct = String(answer) === String(question.answer);
     setIsCorrect(correct);
     
@@ -92,6 +149,19 @@ export default function App() {
         if (newLives <= 0) {
           sounds.playGameOver();
           setGameState('gameover');
+          
+          if (currentUser) {
+            fetch('/api/scores', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                username: currentUser,
+                gameId: activeGame.id,
+                score: score, 
+                level: level
+              })
+            }).catch(console.error);
+          }
         }
         return newLives;
       });
@@ -103,7 +173,7 @@ export default function App() {
         nextQuestion(correct && streak + 1 >= QUESTIONS_PER_LEVEL ? level + 1 : level);
       }, 1000);
     }
-  }, [question, selectedAnswer, level, streak, lives, nextQuestion, activeGame]);
+  }, [question, selectedAnswer, level, streak, lives, nextQuestion, activeGame, currentUser, score]);
 
   useEffect(() => {
     if (gameState === 'playing' && selectedAnswer === null) {
@@ -124,46 +194,193 @@ export default function App() {
   }, [gameState, selectedAnswer, handleAnswer]);
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 font-sans text-white">
-      <div className="max-w-4xl w-full">
-        {gameState === 'menu' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full"
-          >
-            <div className="text-center mb-12">
-              <h1 className="text-5xl font-black mb-4 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                Matemáticas Divertidas
-              </h1>
-              <p className="text-xl text-slate-400">Selecciona un juego para comenzar a practicar</p>
+    <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 font-sans text-white">
+      {gameState === 'auth' && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-md w-full bg-slate-800 rounded-3xl p-8 shadow-2xl border border-slate-700"
+        >
+          <h1 className="text-3xl font-black mb-6 text-center bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+            Calculo Mental
+          </h1>
+          
+          <div className="flex gap-4 mb-6">
+            <button 
+              className={`flex-1 py-2 font-bold rounded-lg transition-colors ${authMode === 'login' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300'}`}
+              onClick={() => { setAuthMode('login'); setAuthError(''); }}
+            >
+              Iniciar Sesión
+            </button>
+            <button 
+              className={`flex-1 py-2 font-bold rounded-lg transition-colors ${authMode === 'register' ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300'}`}
+              onClick={() => { setAuthMode('register'); setAuthError(''); }}
+            >
+              Registro
+            </button>
+          </div>
+
+          <form onSubmit={handleAuth} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-400 mb-1">Nombre de Usuario</label>
+              <input 
+                type="text" 
+                value={usernameInput}
+                onChange={e => setUsernameInput(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Tu usuario"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-400 mb-1">Contraseña</label>
+              <input 
+                type="password" 
+                value={passwordInput}
+                onChange={e => setPasswordInput(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="********"
+                required
+              />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {games.map(game => {
-                const Icon = game.icon;
-                return (
-                  <motion.button
-                    key={game.id}
-                    whileHover={{ scale: 1.05, y: -5 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => selectGame(game.id)}
-                    className={`bg-gradient-to-br ${game.gradient} p-6 rounded-3xl shadow-xl text-left relative overflow-hidden group border border-white/10`}
-                  >
-                    <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <Icon className="w-12 h-12 mb-4 text-white drop-shadow-md" />
-                    <h3 className="text-2xl font-bold mb-2 drop-shadow-sm">{game.title}</h3>
-                    <p className="text-sm text-white/90 drop-shadow-sm line-clamp-3 leading-relaxed">
-                      {game.description}
-                    </p>
-                  </motion.button>
-                )
-              })}
-            </div>
-          </motion.div>
-        )}
+            {authError && <div className="text-red-400 text-sm font-medium">{authError}</div>}
+            
+            <button 
+              type="submit" 
+              className="w-full py-4 mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-xl font-bold text-lg shadow-lg"
+            >
+              {authMode === 'login' ? 'Entrar' : 'Crear Cuenta'}
+            </button>
+          </form>
 
-        {gameState !== 'menu' && activeGame && (
+          <div className="mt-6 text-center">
+            <div className="flex items-center justify-center gap-4 mb-4">
+              <div className="h-px bg-slate-700 flex-1"></div>
+              <span className="text-slate-500 font-medium text-sm">O</span>
+              <div className="h-px bg-slate-700 flex-1"></div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setCurrentUser(null);
+                setGameState('menu');
+              }}
+              className="w-full py-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-xl font-bold text-slate-300 transition-colors"
+            >
+              Jugar como Invitado
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {gameState === 'scores' && (
+        <motion.div
+           initial={{ opacity: 0, y: 20 }}
+           animate={{ opacity: 1, y: 0 }}
+           className="max-w-4xl w-full"
+        >
+          <div className="flex items-center justify-between mb-8">
+            <button 
+              onClick={() => setGameState('menu')}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors font-medium border border-slate-700"
+            >
+              <ArrowLeft className="w-5 h-5" /> Volver al Menú
+            </button>
+            <h2 className="text-3xl font-bold text-center flex-1">Tabla de Puntajes</h2>
+          </div>
+          
+          <div className="bg-slate-800 rounded-3xl overflow-hidden border border-slate-700 shadow-xl">
+            {leaderboard.length === 0 ? (
+              <div className="p-8 text-center text-slate-400">Aún no hay puntajes registrados.</div>
+            ) : (
+              <table className="w-full text-left">
+                <thead className="bg-slate-900/50">
+                  <tr>
+                    <th className="p-4 font-semibold text-slate-300">Usuario</th>
+                    <th className="p-4 font-semibold text-slate-300">Juego</th>
+                    <th className="p-4 font-semibold text-slate-300">Puntaje</th>
+                    <th className="p-4 font-semibold text-slate-300">Nivel</th>
+                    <th className="p-4 font-semibold text-slate-300">Fecha</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-700">
+                  {leaderboard.map((item, idx) => {
+                    const game = games.find(g => g.id === item.gameId);
+                    return (
+                      <tr key={idx} className="hover:bg-slate-700/30 transition-colors">
+                        <td className="p-4 font-bold text-indigo-300">{item.username}</td>
+                        <td className="p-4">{game ? game.title : item.gameId}</td>
+                        <td className="p-4 font-black text-yellow-400">{item.score}</td>
+                        <td className="p-4">{item.level}</td>
+                        <td className="p-4 text-slate-400 text-sm">{new Date(item.date).toLocaleDateString()}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </motion.div>
+      )}
+
+      {gameState === 'menu' && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-5xl w-full"
+        >
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row items-center justify-between mb-12 bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-lg gap-4">
+            <div className="text-xl font-bold">
+              Hola, <span className="text-indigo-400">{currentUser || 'Invitado'}</span> 👋
+            </div>
+            <div className="flex gap-3">
+              <button onClick={viewLeaderboard} className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl transition-colors font-medium text-sm sm:text-base">
+                <ListOrdered className="w-5 h-5" /> Puntajes
+              </button>
+              <button 
+                onClick={handleLogout} 
+                className="flex items-center gap-2 px-4 py-2 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 rounded-xl transition-colors font-medium text-sm sm:text-base"
+              >
+                <LogOut className="w-5 h-5" /> {currentUser ? 'Salir' : 'Volver'}
+              </button>
+            </div>
+          </div>
+
+          <div className="text-center mb-10">
+            <h1 className="text-5xl font-black mb-4 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              Matemáticas Divertidas
+            </h1>
+            <p className="text-xl text-slate-400">Selecciona un juego para comenzar a practicar</p>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+            {games.map(game => {
+              const Icon = game.icon;
+              return (
+                <motion.button
+                  key={game.id}
+                  whileHover={{ scale: 1.05, y: -5 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => selectGame(game.id)}
+                  className={`bg-gradient-to-br ${game.gradient} p-5 rounded-3xl shadow-xl text-left relative overflow-hidden group border border-white/10`}
+                >
+                  <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <Icon className="w-10 h-10 mb-3 text-white drop-shadow-md" />
+                  <h3 className="text-xl font-bold mb-2 drop-shadow-sm leading-tight">{game.title}</h3>
+                  <p className="text-xs text-white/90 drop-shadow-sm line-clamp-3 leading-relaxed">
+                    {game.description}
+                  </p>
+                </motion.button>
+              )
+            })}
+          </div>
+        </motion.div>
+      )}
+
+      {['start', 'playing', 'gameover'].includes(gameState) && activeGame && (
+        <div className="max-w-4xl w-full">
           <div className={`max-w-md mx-auto w-full bg-gradient-to-br ${activeGame.gradient} rounded-3xl shadow-2xl overflow-hidden border border-white/20 transition-colors duration-500`}>
             <AnimatePresence mode="wait">
               {gameState === 'start' && (
@@ -182,12 +399,12 @@ export default function App() {
                   </button>
                   
                   <div className="mb-8 flex justify-center mt-4">
-                    <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center">
+                    <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center shadow-inner">
                       <activeGame.icon className="w-12 h-12 text-white" />
                     </div>
                   </div>
                   <h1 className="text-4xl font-bold mb-4 tracking-tight drop-shadow-md">{activeGame.title}</h1>
-                  <p className="text-lg text-white/90 mb-8 drop-shadow-sm">
+                  <p className="text-lg text-white/90 mb-8 drop-shadow-sm leading-snug">
                     {activeGame.description} ¡Tienes {TIME_LIMIT} segundos por pregunta!
                   </p>
                   <button
@@ -206,13 +423,21 @@ export default function App() {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 1.1 }}
-                  className="p-6"
+                  className="p-6 relative"
                 >
-                  {/* Header */}
-                  <div className="flex justify-between items-center mb-6">
-                    <div className="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-full border border-white/20 shadow-sm">
-                      <Trophy className="w-5 h-5 text-yellow-300" />
-                      <span className="font-bold">{score}</span>
+                  <div className="absolute top-4 right-4 flex gap-2 z-10">
+                    <button onClick={startGame} title="Reiniciar Juego" className="p-2 bg-black/20 hover:bg-black/30 text-white rounded-full transition-colors backdrop-blur-sm border border-white/10">
+                      <RotateCcw className="w-5 h-5" />
+                    </button>
+                    <button onClick={backToMenu} title="Salir al Menú" className="p-2 bg-black/20 hover:bg-black/30 text-white rounded-full transition-colors backdrop-blur-sm border border-white/10">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="flex justify-between items-center mb-6 mt-8">
+                    <div className="flex items-center gap-2 bg-white/20 px-3 py-1.5 rounded-full border border-white/20 shadow-sm">
+                      <Trophy className="w-4 h-4 text-yellow-300" />
+                      <span className="font-bold text-sm">{score}</span>
                     </div>
                     <div className="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-full border border-white/20 shadow-sm">
                       <Star className="w-5 h-5 text-yellow-300" fill="currentColor" />
@@ -225,7 +450,7 @@ export default function App() {
                           animate={{ scale: i < lives ? 1 : 0.5, opacity: i < lives ? 1 : 0.3 }}
                         >
                           <Heart
-                            className={`w-6 h-6 ${i < lives ? 'text-red-400' : 'text-gray-400'}`}
+                            className={`w-6 h-6 ${i < lives ? 'text-red-400' : 'text-slate-300/50'}`}
                             fill="currentColor"
                           />
                         </motion.div>
@@ -233,7 +458,6 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Timer */}
                   <div className="mb-8 pl-1 pr-1">
                     <div className="flex justify-between text-sm font-medium mb-2 opacity-90">
                       <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> Tiempo</span>
@@ -249,7 +473,6 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Question */}
                   <div className="text-center mb-8 min-h-[120px] flex flex-col items-center justify-center">
                     {question.component ? (
                       <motion.div
@@ -266,23 +489,21 @@ export default function App() {
                         key={`text-${question.answer}`}
                         initial={{ y: -20, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
-                        className="text-5xl sm:text-6xl font-black tracking-tighter drop-shadow-xl mt-4"
+                        className="text-4xl sm:text-6xl font-black tracking-tighter drop-shadow-xl mt-4"
                       >
                         {question.text}
                       </motion.div>
                     )}
                   </div>
 
-                  {/* Options */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
                     {question.options.map((opt, i) => {
                       let btnClass = "bg-white/20 hover:bg-white/30 text-white border-white/20 shadow-md";
                       if (selectedAnswer !== null) {
-                         // Must cast values to string before comparing due to random generation logic potentially mixing types.
                         if (String(opt) === String(question.answer)) {
                           btnClass = "bg-green-500 text-white shadow-[0_0_20px_rgba(34,197,94,0.6)] border-green-400";
                         } else if (String(opt) === String(selectedAnswer)) {
-                          btnClass = "bg-red-500 text-white border-red-400";
+                          btnClass = "bg-red-500 text-white border-red-400 shadow-[0_0_20px_rgba(239,68,68,0.6)]";
                         } else {
                           btnClass = "bg-black/20 text-white/50 border-transparent shadow-none";
                         }
@@ -295,7 +516,7 @@ export default function App() {
                           whileTap={selectedAnswer === null ? { scale: 0.95 } : {}}
                           onClick={() => handleAnswer(opt)}
                           disabled={selectedAnswer !== null}
-                          className={`py-5 sm:py-6 rounded-2xl text-2xl sm:text-3xl font-bold transition-all duration-200 border ${btnClass}`}
+                          className={`py-4 sm:py-6 rounded-2xl text-xl sm:text-3xl font-bold transition-all duration-200 border ${btnClass}`}
                         >
                           {opt}
                         </motion.button>
@@ -345,8 +566,8 @@ export default function App() {
               )}
             </AnimatePresence>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

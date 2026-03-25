@@ -1,7 +1,7 @@
 import React from 'react';
 import { GameDef, Question } from './types';
 import { 
-  Plus, Minus, X, Divide, Calculator, Blocks, PieChart, Percent, Superscript, Radical 
+  Plus, Minus, X, Divide, Calculator, Blocks, PieChart, Percent, Superscript, Radical, ArrowRightLeft, Baseline
 } from 'lucide-react';
 import { FractionVisual } from '../components/FractionVisual';
 
@@ -12,6 +12,8 @@ const shuffle = <T,>(array: T[]): T[] => {
 };
 
 const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
 
 const generateNumOptions = (answer: number, variance: number, allowNegative: boolean = false): number[] => {
   const options = new Set<number>([answer]);
@@ -273,5 +275,131 @@ export const games: GameDef[] = [
         options: generateNumOptions(root, 3) // range 1-15, variance 3 is enough
       };
     }
+  },
+  {
+    id: 'porcentajes-10',
+    title: 'Porcentajes (10%)',
+    description: 'Calcula porcentajes múltiplos de 10 (ej. 40% de 90).',
+    icon: Percent,
+    gradient: 'from-amber-400 to-amber-600',
+    generateQuestion: (level) => {
+      const p = randomInt(1, 9) * 10;
+      const multipliers = [10, 20, 30, 40, 50, 100, 150, 200];
+      const n = multipliers[randomInt(0, Math.min(level + 2, multipliers.length - 1))];
+      const answer = (p * n) / 100;
+      return { text: `${p}% de ${n}`, answer, options: generateNumOptions(answer, Math.max(5, answer * 0.2)) };
+    }
+  },
+  {
+    id: 'porcentajes-5',
+    title: 'Porcentajes (5%)',
+    description: 'Calcula porcentajes múltiplos de 5.',
+    icon: Percent,
+    gradient: 'from-emerald-400 to-teal-600',
+    generateQuestion: (level) => {
+      const p = randomInt(1, 19) * 5;
+      const multipliers = [20, 40, 60, 80, 100, 120, 200];
+      const n = multipliers[randomInt(0, Math.min(level + 1, multipliers.length - 1))];
+      const answer = (p * n) / 100;
+      return { text: `${p}% de ${n}`, answer, options: generateNumOptions(answer, Math.max(5, answer * 0.2)) };
+    }
+  },
+  {
+    id: 'porcentajes-1',
+    title: 'Porcentajes Libres',
+    description: 'Calcula cualquier porcentaje del 1% al 100%.',
+    icon: Percent,
+    gradient: 'from-blue-500 to-indigo-600',
+    generateQuestion: (level) => {
+      const p = randomInt(1, 99);
+      const multipliers = [100, 200, 300, 400, 500, 1000];
+      const n = multipliers[randomInt(0, Math.min(level, multipliers.length - 1))];
+      const answer = (p * n) / 100;
+      return { text: `${p}% de ${n}`, answer, options: generateNumOptions(answer, Math.max(5, answer * 0.2)) };
+    }
+  },
+  {
+    id: 'fraccion-a-decimal',
+    title: 'Fracción a Decimal',
+    description: 'Convierte fracciones a números decimales.',
+    icon: ArrowRightLeft,
+    gradient: 'from-violet-500 to-purple-700',
+    generateQuestion: (level) => {
+      const denoms = [2, 4, 5, 8, 10];
+      const d = denoms[randomInt(0, Math.min(level + 1, denoms.length - 1))];
+      const n = randomInt(1, d - 1);
+      const answer = n / d;
+      const options = new Set<number>([answer]);
+      while(options.size < 4) {
+        let wrong = (randomInt(1, d-1) / d) + (Math.random() > 0.5 ? 0 : 0.1);
+        if (wrong !== answer && wrong > 0) options.add(parseFloat(wrong.toFixed(3)));
+      }
+      return { text: `${n}/${d}`, answer, options: shuffle(Array.from(options)) };
+    }
+  },
+  {
+    id: 'decimal-a-fraccion',
+    title: 'Decimal a Fracción',
+    description: 'Convierte números decimales a fracciones simples.',
+    icon: ArrowRightLeft,
+    gradient: 'from-pink-500 to-rose-600',
+    generateQuestion: (level) => {
+      const denoms = [2, 4, 5, 10];
+      const d = denoms[randomInt(0, Math.min(level, denoms.length - 1))];
+      const n = randomInt(1, d - 1);
+      const dec = n / d;
+      
+      const g = gcd(n, d);
+      const answer = `${n/g}/${d/g}`;
+      
+      const options = new Set<string>([answer]);
+      while(options.size < 4) {
+        let wd = denoms[randomInt(0, denoms.length - 1)];
+        let wn = randomInt(1, wd - 1);
+        let wg = gcd(wn, wd);
+        let wrong = `${wn/wg}/${wd/wg}`;
+        if (wrong !== answer) options.add(wrong);
+      }
+      return { text: dec.toString(), answer, options: shuffle(Array.from(options)) };
+    }
+  },
+  {
+    id: 'porcentaje-a-fraccion-100',
+    title: 'Porcentaje a Fracción /100',
+    description: 'Transforma el porcentaje en una fracción con denominador 100.',
+    icon: Baseline,
+    gradient: 'from-cyan-500 to-blue-500',
+    generateQuestion: (level) => {
+      const p = randomInt(1, 99);
+      const answer = `${p}/100`;
+      const options = new Set<string>([answer]);
+      while(options.size < 4) {
+        let wrongP = p + randomInt(-20, 20);
+        if (wrongP > 0 && wrongP !== p) options.add(`${wrongP}/100`);
+      }
+      return { text: `${p}%`, answer, options: shuffle(Array.from(options)) };
+    }
+  },
+  {
+    id: 'porcentaje-a-fraccion-simp',
+    title: 'Porcentaje Simplificado',
+    description: 'Transforma el porcentaje en la fracción más pequeña (simplificada).',
+    icon: Baseline,
+    gradient: 'from-fuchsia-500 to-purple-600',
+    generateQuestion: (level) => {
+      const p = randomInt(1, 19) * 5; // like 5, 25, 40, etc
+      const g = gcd(p, 100);
+      const answer = `${p/g}/${100/g}`;
+      
+      const options = new Set<string>([answer]);
+      while(options.size < 4) {
+        let wp = randomInt(1, 19) * 5;
+        let wg = gcd(wp, 100);
+        let wrong = `${wp/wg}/${100/wg}`;
+        if (wrong !== answer) options.add(wrong);
+      }
+      return { text: `${p}%`, answer, options: shuffle(Array.from(options)) };
+    }
+
   }
 ];
