@@ -1,0 +1,5 @@
+{
+  "name": "Multiplicador Rápido",
+  "description": "Un juego interactivo para aprender y practicar las tablas de multiplicar con niveles, vidas y tiempo límite.",
+  "requestFramePermissions": []
+}
