@@ -23,7 +23,9 @@ export default function App() {
   const [passwordInput, setPasswordInput] = useState('');
   const [firstNameInput, setFirstNameInput] = useState('');
   const [lastNameInput, setLastNameInput] = useState('');
+  const [emailInput, setEmailInput] = useState('');
   const [authError, setAuthError] = useState('');
+  const [authSuccess, setAuthSuccess] = useState('');
 
   const [activeGameId, setActiveGameId] = useState<string | null>(null);
   const [score, setScore] = useState(0);
@@ -81,28 +83,44 @@ export default function App() {
         setPasswordInput('');
       } else {
         // Register
-        if (!firstNameInput || !lastNameInput) {
-          setAuthError('Por favor ingresa nombre y apellido.');
+        if (!firstNameInput || !lastNameInput || !emailInput) {
+          setAuthError('Por favor completa todos los campos.');
           return;
         }
         if (!querySnapshot.empty) {
           setAuthError('El usuario ya existe.');
           return;
         }
+        
+        const qName = query(usersRef, where('firstName', '==', firstNameInput), where('lastName', '==', lastNameInput));
+        const nameSnapshot = await getDocs(qName);
+        if (!nameSnapshot.empty) {
+          setAuthError('Ya existe una persona registrada con ese mismo Nombre y Apellido.');
+          return;
+        }
+
         await addDoc(usersRef, {
           username: usernameInput,
+          email: emailInput,
           password: passwordInput,
           firstName: firstNameInput,
           lastName: lastNameInput,
           createdAt: new Date().toISOString()
         });
-        localStorage.setItem('calculo_mental_user', usernameInput);
-        setCurrentUser(usernameInput);
-        setGameState('menu');
-        setUsernameInput('');
-        setPasswordInput('');
-        setFirstNameInput('');
-        setLastNameInput('');
+        
+        setAuthSuccess('¡Registrado exitosamente! Se ha enviado una confirmación a tu mail institucional.');
+        
+        setTimeout(() => {
+          localStorage.setItem('calculo_mental_user', usernameInput);
+          setCurrentUser(usernameInput);
+          setGameState('menu');
+          setUsernameInput('');
+          setPasswordInput('');
+          setFirstNameInput('');
+          setLastNameInput('');
+          setEmailInput('');
+          setAuthSuccess('');
+        }, 3500);
       }
     } catch (err) {
       console.error(err);
@@ -266,6 +284,36 @@ export default function App() {
     };
   }, [gameState, selectedAnswer, handleAnswer]);
 
+  const renderFormattedText = (text: string | number) => {
+    if (typeof text !== 'string') return text;
+    
+    if (text.includes('^')) {
+      const parts = text.split('^');
+      if (parts.length === 2) {
+        return (
+          <div className="flex items-start justify-center">
+            <span>{parts[0]}</span>
+            <span className="text-[0.6em] mt-0.5 ml-0.5 font-bold leading-none">{parts[1]}</span>
+          </div>
+        );
+      }
+    }
+    
+    if (text.includes('/') && text.length < 10 && !text.includes(' ')) {
+      const parts = text.split('/');
+      if (parts.length === 2) {
+        return (
+          <div className="flex flex-col items-center leading-none text-[0.8em]">
+            <span className="border-b-[3px] border-current px-2 pb-0.5">{parts[0]}</span>
+            <span className="px-2 pt-0.5">{parts[1]}</span>
+          </div>
+        );
+      }
+    }
+    
+    return text;
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 font-sans text-white">
       {gameState === 'auth' && (
@@ -296,30 +344,43 @@ export default function App() {
 
             <form onSubmit={handleAuth} className="space-y-4">
               {authMode === 'register' && (
-                <div className="flex gap-4">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-slate-400 mb-1">Nombre</label>
+                <>
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-slate-400 mb-1">Nombre</label>
+                      <input 
+                        type="text" 
+                        value={firstNameInput}
+                        onChange={e => setFirstNameInput(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Tu nombre"
+                        required
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-slate-400 mb-1">Apellido</label>
+                      <input 
+                        type="text" 
+                        value={lastNameInput}
+                        onChange={e => setLastNameInput(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Tu apellido"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-1">Mail Institucional</label>
                     <input 
-                      type="text" 
-                      value={firstNameInput}
-                      onChange={e => setFirstNameInput(e.target.value)}
+                      type="email" 
+                      value={emailInput}
+                      onChange={e => setEmailInput(e.target.value)}
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Tu nombre"
+                      placeholder="correo@colegio.edu"
                       required
                     />
                   </div>
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-slate-400 mb-1">Apellido</label>
-                    <input 
-                      type="text" 
-                      value={lastNameInput}
-                      onChange={e => setLastNameInput(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Tu apellido"
-                      required
-                    />
-                  </div>
-                </div>
+                </>
               )}
               <div>
                 <label className="block text-sm font-medium text-slate-400 mb-1">Nombre de Usuario</label>
@@ -344,11 +405,13 @@ export default function App() {
                 />
               </div>
               
-              {authError && <div className="text-red-400 text-sm font-medium">{authError}</div>}
+              {authError && <div className="text-red-400 text-sm font-medium bg-red-500/10 p-3 rounded-lg border border-red-500/20">{authError}</div>}
+              {authSuccess && <div className="text-emerald-400 text-sm font-medium bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/20">{authSuccess}</div>}
               
               <button 
                 type="submit" 
-                className="w-full py-4 mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-xl font-bold text-lg shadow-lg"
+                disabled={!!authSuccess}
+                className="w-full py-4 mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-bold text-lg shadow-lg"
               >
                 {authMode === 'login' ? 'Entrar' : 'Crear Cuenta'}
               </button>
@@ -635,7 +698,7 @@ export default function App() {
                         animate={{ y: 0, opacity: 1 }}
                         className="text-4xl sm:text-6xl font-black tracking-tighter drop-shadow-xl mt-4"
                       >
-                        {question.text}
+                        {renderFormattedText(question.text)}
                       </motion.div>
                     )}
                   </div>
@@ -662,7 +725,7 @@ export default function App() {
                           disabled={selectedAnswer !== null}
                           className={`py-4 sm:py-5 rounded-2xl text-xl sm:text-3xl font-bold transition-all duration-200 border ${btnClass}`}
                         >
-                          {opt}
+                          {renderFormattedText(opt)}
                         </motion.button>
                       );
                     })}

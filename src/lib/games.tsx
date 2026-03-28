@@ -415,257 +415,163 @@ export const games: GameDef[] = [
     }
   },
   {
-    id: 'potencias-mult-base',
-    title: 'Multiplicación (Igual Base)',
-    description: 'Aplica propiedades y calcula el resultado. Ej: a^b × a^c = a^(b+c)',
+    id: 'potencias-propiedades',
+    title: 'Propiedades de Potencias',
+    description: 'Aplica todas las propiedades (multiplicación, división, potencia de potencia, exponente cero, negativo, etc).',
     icon: Superscript,
     gradient: 'from-blue-500 to-indigo-600',
     generateQuestion: (level) => {
-      const base = randomInt(2, 5);
-      const e1 = randomInt(1, 3);
-      const e2 = randomInt(1, 3);
-      const answer = Math.pow(base, e1 + e2);
-      return {
-        component: (
-          <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-4 my-2">
-            <div className="flex items-start"><span>{base}</span><span className="text-2xl mt-1">{e1}</span></div>
-            <span>×</span>
-            <div className="flex items-start"><span>{base}</span><span className="text-2xl mt-1">{e2}</span></div>
-          </div>
-        ),
-        answer,
-        options: generateNumOptions(answer, Math.max(5, answer * 0.5))
-      };
-    }
-  },
-  {
-    id: 'potencias-mult-exp',
-    title: 'Multiplicación (Igual Exponente)',
-    description: 'Aplica propiedades y calcula el resultado. Ej: a^c × b^c = (a×b)^c',
-    icon: Superscript,
-    gradient: 'from-indigo-500 to-purple-600',
-    generateQuestion: (level) => {
-      const base1 = randomInt(2, 5);
-      const base2 = randomInt(2, 4);
-      const e = randomInt(2, 3);
-      const answer = Math.pow(base1 * base2, e);
-      return {
-        component: (
-          <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-4 my-2">
-            <div className="flex items-start"><span>{base1}</span><span className="text-2xl mt-1">{e}</span></div>
-            <span>×</span>
-            <div className="flex items-start"><span>{base2}</span><span className="text-2xl mt-1">{e}</span></div>
-          </div>
-        ),
-        answer,
-        options: generateNumOptions(answer, Math.max(5, answer * 0.5))
-      };
-    }
-  },
-  {
-    id: 'potencias-pot',
-    title: 'Potencia de una Potencia',
-    description: 'Se multiplican los exponentes. Ej: (a^b)^c = a^(b×c)',
-    icon: Superscript,
-    gradient: 'from-purple-500 to-pink-600',
-    generateQuestion: (level) => {
-      const base = randomInt(2, 4);
-      const e1 = randomInt(2, 3);
-      const e2 = randomInt(2, 3);
-      const answer = Math.pow(base, e1 * e2);
-      return {
-        component: (
-          <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-1 my-2">
-            <span>(</span>
-            <div className="flex items-start"><span>{base}</span><span className="text-2xl mt-1">{e1}</span></div>
-            <span>)</span>
-            <span className="text-2xl mt-1 ml-1">{e2}</span>
-          </div>
-        ),
-        answer,
-        options: generateNumOptions(answer, Math.max(5, answer * 0.5))
-      };
-    }
-  },
-  {
-    id: 'potencias-div-base',
-    title: 'División (Igual Base)',
-    description: 'Resta los exponentes. Ej: a^b ÷ a^c = a^(b-c)',
-    icon: Superscript,
-    gradient: 'from-pink-500 to-rose-600',
-    generateQuestion: (level) => {
-      const base = randomInt(2, 5);
-      const e1 = randomInt(3, 6);
-      const e2 = randomInt(1, e1 - 1);
-      const answer = Math.pow(base, e1 - e2);
-      return {
-        component: (
-          <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-4 my-2">
-            <div className="flex items-start"><span>{base}</span><span className="text-2xl mt-1">{e1}</span></div>
-            <span>÷</span>
-            <div className="flex items-start"><span>{base}</span><span className="text-2xl mt-1">{e2}</span></div>
-          </div>
-        ),
-        answer,
-        options: generateNumOptions(answer, Math.max(5, answer * 0.5))
-      };
-    }
-  },
-  {
-    id: 'potencias-div-exp',
-    title: 'División (Igual Exponente)',
-    description: 'Divide las bases. Ej: a^c ÷ b^c = (a÷b)^c',
-    icon: Superscript,
-    gradient: 'from-rose-500 to-orange-600',
-    generateQuestion: (level) => {
-      const b2 = randomInt(2, 5);
-      const mult = randomInt(2, 5);
-      const b1 = b2 * mult;
-      const e = randomInt(2, 3);
-      const answer = Math.pow(b1 / b2, e);
-      return {
-        component: (
-          <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-4 my-2">
-            <div className="flex items-start"><span>{b1}</span><span className="text-2xl mt-1">{e}</span></div>
-            <span>÷</span>
-            <div className="flex items-start"><span>{b2}</span><span className="text-2xl mt-1">{e}</span></div>
-          </div>
-        ),
-        answer,
-        options: generateNumOptions(answer, Math.max(2, answer * 0.5))
-      };
-    }
-  },
-  {
-    id: 'potencias-exp-1',
-    title: 'Exponente Uno',
-    description: 'Todo número elevado a 1 es igual al mismo número.',
-    icon: Superscript,
-    gradient: 'from-orange-500 to-amber-600',
-    generateQuestion: (level) => {
-      const base = randomInt(11, 150);
-      return {
-        component: (
-          <div className="flex items-start justify-center text-6xl font-black drop-shadow-xl gap-1 my-2">
-            <span>{base}</span><span className="text-3xl mt-1">1</span>
-          </div>
-        ),
-        answer: base,
-        options: generateNumOptions(base, 10)
-      };
-    }
-  },
-  {
-    id: 'potencias-exp-0',
-    title: 'Exponente Cero',
-    description: 'Todo número distinto de 0 elevado a 0 es igual a 1.',
-    icon: Superscript,
-    gradient: 'from-amber-500 to-yellow-600',
-    generateQuestion: (level) => {
-      const base = randomInt(5, 500);
-      return {
-        component: (
-          <div className="flex items-start justify-center text-6xl font-black drop-shadow-xl gap-1 my-2">
-            <span>{base}</span><span className="text-3xl mt-1">0</span>
-          </div>
-        ),
-        answer: 1,
-        options: [0, 1, base, base * 10].sort(() => Math.random() - 0.5)
-      };
-    }
-  },
-  {
-    id: 'potencias-exp-neg',
-    title: 'Exponente Negativo',
-    description: 'Invierte la base y el exponente cambia a positivo.',
-    icon: Superscript,
-    gradient: 'from-lime-500 to-green-600',
-    generateQuestion: (level) => {
-      const base = randomInt(2, 5);
-      const exp = randomInt(1, 3);
-      const val = Math.pow(base, exp);
-      const answer = `1/${val}`;
-      const options = new Set<string>([answer]);
-      options.add(`1/${val + randomInt(1, 4)}`);
-      if (val !== 1) options.add(`${val}`);
-      options.add(`-${val}`);
-      while(options.size < 4) {
-          options.add(`1/${val + randomInt(5, 15)}`);
-      }
-      return {
-        component: (
-          <div className="flex items-start justify-center text-6xl font-black drop-shadow-xl gap-1 my-2">
-            <span>{base}</span><span className="text-3xl mt-1">-{exp}</span>
-          </div>
-        ),
-        answer,
-        options: shuffle(Array.from(options))
-      };
-    }
-  },
-  {
-    id: 'potencias-fraccion',
-    title: 'Potencia de una Fracción',
-    description: 'El exponente se aplica al numerador y al denominador.',
-    icon: Superscript,
-    gradient: 'from-emerald-500 to-teal-600',
-    generateQuestion: (level) => {
-      const d = randomInt(3, 6);
-      const n = randomInt(1, d - 1);
-      const e = randomInt(2, 3);
-      const answer = `${Math.pow(n, e)}/${Math.pow(d, e)}`;
-      const options = new Set<string>([answer]);
-      while(options.size < 4) {
-        let wd = randomInt(2, 10);
-        let wn = randomInt(1, wd);
-        if (Math.pow(wn, e) !== Math.pow(n, e) && `${Math.pow(wn, e)}/${Math.pow(wd, e)}` !== answer) {
-          options.add(`${Math.pow(wn, e)}/${Math.pow(wd, e)}`);
+      const generators = [
+        () => {
+          const base = randomInt(2, 5); const e1 = randomInt(1, 3); const e2 = randomInt(1, 3);
+          const answer = Math.pow(base, e1 + e2);
+          return {
+            component: (
+              <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-4 my-2">
+                <div className="flex items-start"><span>{base}</span><span className="text-2xl mt-1">{e1}</span></div>
+                <span>×</span>
+                <div className="flex items-start"><span>{base}</span><span className="text-2xl mt-1">{e2}</span></div>
+              </div>
+            ),
+            answer, options: generateNumOptions(answer, Math.max(5, answer * 0.5))
+          };
+        },
+        () => {
+          const base1 = randomInt(2, 5); const base2 = randomInt(2, 4); const e = randomInt(2, 3);
+          const answer = Math.pow(base1 * base2, e);
+          return {
+            component: (
+              <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-4 my-2">
+                <div className="flex items-start"><span>{base1}</span><span className="text-2xl mt-1">{e}</span></div>
+                <span>×</span>
+                <div className="flex items-start"><span>{base2}</span><span className="text-2xl mt-1">{e}</span></div>
+              </div>
+            ),
+            answer, options: generateNumOptions(answer, Math.max(5, answer * 0.5))
+          };
+        },
+        () => {
+          const base = randomInt(2, 4); const e1 = randomInt(2, 3); const e2 = randomInt(2, 3);
+          const answer = Math.pow(base, e1 * e2);
+          return {
+            component: (
+              <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-1 my-2">
+                <span>(</span>
+                <div className="flex items-start"><span>{base}</span><span className="text-2xl mt-1">{e1}</span></div>
+                <span>)</span><span className="text-2xl mt-1 ml-1">{e2}</span>
+              </div>
+            ),
+            answer, options: generateNumOptions(answer, Math.max(5, answer * 0.5))
+          };
+        },
+        () => {
+          const base = randomInt(2, 5); const e1 = randomInt(3, 6); const e2 = randomInt(1, e1 - 1);
+          const answer = Math.pow(base, e1 - e2);
+          return {
+            component: (
+              <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-4 my-2">
+                <div className="flex items-start"><span>{base}</span><span className="text-2xl mt-1">{e1}</span></div>
+                <span>÷</span>
+                <div className="flex items-start"><span>{base}</span><span className="text-2xl mt-1">{e2}</span></div>
+              </div>
+            ),
+            answer, options: generateNumOptions(answer, Math.max(5, answer * 0.5))
+          };
+        },
+        () => {
+          const b2 = randomInt(2, 5); const mult = randomInt(2, 5); const b1 = b2 * mult; const e = randomInt(2, 3);
+          const answer = Math.pow(b1 / b2, e);
+          return {
+            component: (
+              <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-4 my-2">
+                <div className="flex items-start"><span>{b1}</span><span className="text-2xl mt-1">{e}</span></div>
+                <span>÷</span>
+                <div className="flex items-start"><span>{b2}</span><span className="text-2xl mt-1">{e}</span></div>
+              </div>
+            ),
+            answer, options: generateNumOptions(answer, Math.max(2, answer * 0.5))
+          };
+        },
+        () => {
+          const base = randomInt(11, 150);
+          return {
+            component: (
+              <div className="flex items-start justify-center text-6xl font-black drop-shadow-xl gap-1 my-2">
+                <span>{base}</span><span className="text-3xl mt-1">1</span>
+              </div>
+            ),
+            answer: base, options: generateNumOptions(base, 10)
+          };
+        },
+        () => {
+          const base = randomInt(5, 500);
+          return {
+            component: (
+              <div className="flex items-start justify-center text-6xl font-black drop-shadow-xl gap-1 my-2">
+                <span>{base}</span><span className="text-3xl mt-1">0</span>
+              </div>
+            ),
+            answer: 1, options: [0, 1, base, base * 10].sort(() => Math.random() - 0.5)
+          };
+        },
+        () => {
+          const base = randomInt(2, 5); const exp = randomInt(1, 3); const val = Math.pow(base, exp);
+          const answer = `1/${val}`; const options = new Set<string>([answer]);
+          options.add(`1/${val + randomInt(1, 4)}`); if (val !== 1) options.add(`${val}`); options.add(`-${val}`);
+          while(options.size < 4) options.add(`1/${val + randomInt(5, 15)}`);
+          return {
+            component: (
+              <div className="flex items-start justify-center text-6xl font-black drop-shadow-xl gap-1 my-2">
+                <span>{base}</span><span className="text-3xl mt-1">-{exp}</span>
+              </div>
+            ),
+            answer, options: shuffle(Array.from(options))
+          };
+        },
+        () => {
+          const d = randomInt(3, 6); const n = randomInt(1, d - 1); const e = randomInt(2, 3);
+          const answer = `${Math.pow(n, e)}/${Math.pow(d, e)}`; const options = new Set<string>([answer]);
+          while(options.size < 4) {
+            let wd = randomInt(2, 10); let wn = randomInt(1, wd);
+            if (Math.pow(wn, e) !== Math.pow(n, e) && `${Math.pow(wn, e)}/${Math.pow(wd, e)}` !== answer) {
+              options.add(`${Math.pow(wn, e)}/${Math.pow(wd, e)}`);
+            }
+          }
+          return {
+            component: (
+              <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-2 my-2">
+                <span>(</span>
+                <div className="flex flex-col items-center text-4xl mt-2">
+                  <span className="border-b-[3px] border-white/90 px-2 pb-1 leading-none">{n}</span>
+                  <span className="px-2 pt-1 leading-none">{d}</span>
+                </div>
+                <span>)</span><span className="text-2xl mt-1 -ml-1 self-start">{e}</span>
+              </div>
+            ),
+            answer, options: shuffle(Array.from(options))
+          };
+        },
+        () => {
+          const decs = [0.1, 0.5, 1.5, 2.5, 0.2]; const base = decs[randomInt(0, decs.length - 1)];
+          const e = base === 0.1 || base === 0.2 || base === 0.5 ? randomInt(2, 3) : 2;
+          const answer = Number(Math.pow(base, e).toFixed(3)); const options = new Set<number>([answer]);
+          while(options.size < 4) {
+            const wrong = Number((answer + randomInt(-5, 5) * (e===2? 0.01 : 0.001)).toFixed(3));
+            if (wrong !== answer && wrong > 0) options.add(wrong);
+          }
+          return {
+            component: (
+              <div className="flex items-start justify-center text-6xl font-black drop-shadow-xl gap-1 my-2">
+                <span>{base}</span><span className="text-3xl mt-1">{e}</span>
+              </div>
+            ),
+            answer, options: shuffle(Array.from(options))
+          };
         }
-      }
-      return {
-        component: (
-          <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-2 my-2">
-            <span>(</span>
-            <div className="flex flex-col items-center text-4xl mt-2">
-              <span className="border-b-[3px] border-white/90 px-2 pb-1 leading-none">{n}</span>
-              <span className="px-2 pt-1 leading-none">{d}</span>
-            </div>
-            <span>)</span>
-            <span className="text-2xl mt-1 -ml-1 self-start">{e}</span>
-          </div>
-        ),
-        answer,
-        options: shuffle(Array.from(options))
-      };
-    }
-  },
-  {
-    id: 'potencias-decimal',
-    title: 'Potencia Decimal Simple',
-    description: 'Eleva un número decimal a una potencia pequeña. Ej: 2.5^2',
-    icon: Superscript,
-    gradient: 'from-cyan-500 to-sky-600',
-    generateQuestion: (level) => {
-      const decs = [0.1, 0.5, 1.5, 2.5, 0.2];
-      const base = decs[randomInt(0, decs.length - 1)];
-      const e = base === 0.1 || base === 0.2 || base === 0.5 ? randomInt(2, 3) : 2;
-      const answer = Number(Math.pow(base, e).toFixed(3));
+      ];
       
-      const options = new Set<number>([answer]);
-      while(options.size < 4) {
-        const wrong = Number((answer + randomInt(-5, 5) * (e===2? 0.01 : 0.001)).toFixed(3));
-        if (wrong !== answer && wrong > 0) options.add(wrong);
-      }
-      
-      return {
-        component: (
-          <div className="flex items-start justify-center text-6xl font-black drop-shadow-xl gap-1 my-2">
-            <span>{base}</span><span className="text-3xl mt-1">{e}</span>
-          </div>
-        ),
-        answer,
-        options: shuffle(Array.from(options))
-      };
+      const gen = generators[randomInt(0, generators.length - 1)];
+      return gen();
     }
   },
   {
