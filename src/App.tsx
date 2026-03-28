@@ -5,7 +5,8 @@ import confetti from 'canvas-confetti';
 import { sounds } from './lib/sounds';
 import { games } from './lib/games';
 import { GameDef, Question } from './lib/types';
-// Firebase imports removed
+import { collection, query, where, getDocs, addDoc, orderBy, limit } from 'firebase/firestore';
+import { db } from './lib/firebase';
 
 type AuthMode = 'login' | 'register';
 type GameState = 'auth' | 'menu' | 'start' | 'playing' | 'gameover' | 'scores' | 'settings';
@@ -58,21 +59,23 @@ export default function App() {
     e.preventDefault();
     setAuthError('');
     try {
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('username', '==', usernameInput));
+      const querySnapshot = await getDocs(q);
+
       if (authMode === 'login') {
-        const res = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: usernameInput, password: passwordInput })
-        });
-        const data = await res.json();
-        
-        if (!res.ok) {
-          setAuthError(data.error || 'Error al iniciar sesión.');
+        if (querySnapshot.empty) {
+          setAuthError('El usuario no existe.');
+          return;
+        }
+        const userDoc = querySnapshot.docs[0].data();
+        if (userDoc.password !== passwordInput) {
+          setAuthError('Contraseña incorrecta.');
           return;
         }
         
-        localStorage.setItem('calculo_mental_user', data.username);
-        setCurrentUser(data.username);
+        localStorage.setItem('calculo_mental_user', userDoc.username);
+        setCurrentUser(userDoc.username);
         setGameState('menu');
         setUsernameInput('');
         setPasswordInput('');
@@ -82,25 +85,19 @@ export default function App() {
           setAuthError('Por favor ingresa nombre y apellido.');
           return;
         }
-        const res = await fetch('/api/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            username: usernameInput, 
-            password: passwordInput,
-            firstName: firstNameInput,
-            lastName: lastNameInput
-          })
-        });
-        const data = await res.json();
-        
-        if (!res.ok) {
-          setAuthError(data.error || 'Error al registrar.');
+        if (!querySnapshot.empty) {
+          setAuthError('El usuario ya existe.');
           return;
         }
-        
-        localStorage.setItem('calculo_mental_user', data.username);
-        setCurrentUser(data.username);
+        await addDoc(usersRef, {
+          username: usernameInput,
+          password: passwordInput,
+          firstName: firstNameInput,
+          lastName: lastNameInput,
+          createdAt: new Date().toISOString()
+        });
+        localStorage.setItem('calculo_mental_user', usernameInput);
+        setCurrentUser(usernameInput);
         setGameState('menu');
         setUsernameInput('');
         setPasswordInput('');
@@ -109,7 +106,7 @@ export default function App() {
       }
     } catch (err) {
       console.error(err);
-      setAuthError('Error de red al conectar con el servidor.');
+      setAuthError('Error conectando a Firebase. Verifica tu configuración y conexión a internet.');
     }
   };
 
@@ -126,12 +123,42 @@ export default function App() {
 
   const viewLeaderboard = async () => {
     try {
-      const res = await fetch('/api/leaderboard');
-      if (res.ok) {
-        const data = await res.json();
-        setLeaderboard(data);
-        setGameState('scores');
-      }
+      const usersSnapshot = await getDocs(collection(db, 'users'));
+      const usersData = usersSnapshot.docs.reduce((acc: any, doc) => {
+        const data = doc.data();
+        acc[data.username] = data;
+        return acc;
+      }, {});
+
+      const scoresSnapshot = await getDocs(collection(db, 'scores'));
+      
+      const userScores: Record<string, Record<string, number>> = {};
+      
+      scoresSnapshot.forEach(doc => {
+        const data = doc.data();
+        if (!userScores[data.username]) userScores[data.username] = {};
+        const currentMax = userScores[data.username][data.gameId] || 0;
+        if (data.score > currentMax) {
+          userScores[data.username][data.gameId] = data.score;
+        }
+      });
+
+      const processedLeaderboard = Object.keys(userScores).map(username => {
+        const games = userScores[username];
+        const totalScore = Object.values(games).reduce((sum, score) => sum + score, 0);
+        const user = usersData[username];
+        return {
+          username,
+          firstName: user?.firstName || '',
+          lastName: user?.lastName || '',
+          totalScore,
+          totalGames: Object.keys(games).length
+        };
+      });
+
+      processedLeaderboard.sort((a, b) => b.totalScore - a.totalScore);
+      setLeaderboard(processedLeaderboard.slice(0, 50));
+      setGameState('scores');
     } catch (err) {
       console.error(err);
     }
@@ -199,20 +226,14 @@ export default function App() {
           setGameState('gameover');
           
           if (currentUser) {
-            try {
-              fetch('/api/scores', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  username: currentUser,
-                  gameId: activeGame.id,
-                  score: score,
-                  level: level
-                })
-              }).catch(err => console.error('Error saving score:', err));
-            } catch (err) {
-              console.error('Error invoking fetch for score:', err);
-            }
+            const cappedScore = Math.min(1000, score);
+            addDoc(collection(db, 'scores'), {
+              username: currentUser,
+              gameId: activeGame.id,
+              score: cappedScore,
+              level: level,
+              date: new Date().toISOString()
+            }).catch(err => console.error('Error saving score to Firebase:', err));
           }
         }
         return newLives;
