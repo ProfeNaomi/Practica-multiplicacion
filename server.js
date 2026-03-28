@@ -20,17 +20,17 @@ const getDb = () => JSON.parse(fs.readFileSync(dbPath, 'utf8'));
 const saveDb = (data) => fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
 
 app.post('/api/register', (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: 'Username y contraseña requeridos' });
+  const { username, password, firstName, lastName } = req.body;
+  if (!username || !password || !firstName || !lastName) return res.status(400).json({ error: 'Todos los campos son requeridos' });
   
   const db = getDb();
   if (db.users.find(u => u.username === username)) {
     return res.status(400).json({ error: 'El usuario ya existe' });
   }
 
-  db.users.push({ username, password, createdAt: new Date().toISOString() });
+  db.users.push({ username, password, firstName, lastName, createdAt: new Date().toISOString() });
   saveDb(db);
-  res.json({ success: true, username });
+  res.json({ success: true, username, firstName, lastName });
 });
 
 app.post('/api/login', (req, res) => {
@@ -46,8 +46,11 @@ app.post('/api/scores', (req, res) => {
   const { username, gameId, score, level } = req.body;
   if (!username) return res.status(400).json({ error: 'Username requerido' });
 
+  // Cap score at 1000 per game as requested
+  const cappedScore = Math.min(score, 1000);
+
   const db = getDb();
-  db.scores.push({ username, gameId, score, level, date: new Date().toISOString() });
+  db.scores.push({ username, gameId, score: cappedScore, level, date: new Date().toISOString() });
   saveDb(db);
   res.json({ success: true });
 });
@@ -56,6 +59,44 @@ app.get('/api/scores', (req, res) => {
   const db = getDb();
   // Return top 50 scores or all scores
   res.json(db.scores.sort((a,b) => b.score - a.score || new Date(b.date) - new Date(a.date)).slice(0, 50));
+});
+
+// New endpoint to calculate leaderboard by summing maximum scores per game
+app.get('/api/leaderboard', (req, res) => {
+  const db = getDb();
+  
+  // Calculate max score per game for each user
+  const userScores = {};
+  
+  db.scores.forEach(s => {
+    if (!userScores[s.username]) {
+      userScores[s.username] = {};
+    }
+    const currentMax = userScores[s.username][s.gameId] || 0;
+    if (s.score > currentMax) {
+      userScores[s.username][s.gameId] = s.score;
+    }
+  });
+
+  const leaderboard = Object.keys(userScores).map(username => {
+    const user = db.users.find(u => u.username === username);
+    const games = userScores[username];
+    const totalScore = Object.values(games).reduce((sum, score) => sum + score, 0);
+    const totalGames = Object.keys(games).length;
+    
+    return {
+      username,
+      firstName: user?.firstName || '',
+      lastName: user?.lastName || '',
+      totalScore,
+      totalGames,
+      lastPlayed: new Date().toISOString() // Or get from scores if needed
+    };
+  });
+
+  leaderboard.sort((a, b) => b.totalScore - a.totalScore);
+  
+  res.json(leaderboard.slice(0, 50));
 });
 
 const PORT = process.env.PORT || 3001;

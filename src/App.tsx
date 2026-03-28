@@ -5,8 +5,7 @@ import confetti from 'canvas-confetti';
 import { sounds } from './lib/sounds';
 import { games } from './lib/games';
 import { GameDef, Question } from './lib/types';
-import { collection, query, where, getDocs, addDoc, orderBy, limit } from 'firebase/firestore';
-import { db } from './lib/firebase';
+// Firebase imports removed
 
 type AuthMode = 'login' | 'register';
 type GameState = 'auth' | 'menu' | 'start' | 'playing' | 'gameover' | 'scores' | 'settings';
@@ -21,6 +20,8 @@ export default function App() {
   
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
+  const [firstNameInput, setFirstNameInput] = useState('');
+  const [lastNameInput, setLastNameInput] = useState('');
   const [authError, setAuthError] = useState('');
 
   const [activeGameId, setActiveGameId] = useState<string | null>(null);
@@ -57,45 +58,58 @@ export default function App() {
     e.preventDefault();
     setAuthError('');
     try {
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef, where('username', '==', usernameInput));
-      const querySnapshot = await getDocs(q);
-      
       if (authMode === 'login') {
-        if (querySnapshot.empty) {
-          setAuthError('El usuario no existe.');
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: usernameInput, password: passwordInput })
+        });
+        const data = await res.json();
+        
+        if (!res.ok) {
+          setAuthError(data.error || 'Error al iniciar sesión.');
           return;
         }
-        const userDoc = querySnapshot.docs[0].data();
-        if (userDoc.password !== passwordInput) {
-          setAuthError('Contraseña incorrecta.');
-          return;
-        }
-        localStorage.setItem('calculo_mental_user', usernameInput);
-        setCurrentUser(usernameInput);
+        
+        localStorage.setItem('calculo_mental_user', data.username);
+        setCurrentUser(data.username);
         setGameState('menu');
         setUsernameInput('');
         setPasswordInput('');
       } else {
         // Register
-        if (!querySnapshot.empty) {
-          setAuthError('El usuario ya existe.');
+        if (!firstNameInput || !lastNameInput) {
+          setAuthError('Por favor ingresa nombre y apellido.');
           return;
         }
-        await addDoc(usersRef, {
-          username: usernameInput,
-          password: passwordInput,
-          createdAt: new Date().toISOString()
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            username: usernameInput, 
+            password: passwordInput,
+            firstName: firstNameInput,
+            lastName: lastNameInput
+          })
         });
-        localStorage.setItem('calculo_mental_user', usernameInput);
-        setCurrentUser(usernameInput);
+        const data = await res.json();
+        
+        if (!res.ok) {
+          setAuthError(data.error || 'Error al registrar.');
+          return;
+        }
+        
+        localStorage.setItem('calculo_mental_user', data.username);
+        setCurrentUser(data.username);
         setGameState('menu');
         setUsernameInput('');
         setPasswordInput('');
+        setFirstNameInput('');
+        setLastNameInput('');
       }
     } catch (err) {
       console.error(err);
-      setAuthError('Error conectando a Firebase. Verifica tu configuración.');
+      setAuthError('Error de red al conectar con el servidor.');
     }
   };
 
@@ -112,12 +126,12 @@ export default function App() {
 
   const viewLeaderboard = async () => {
     try {
-      const scoresRef = collection(db, 'scores');
-      const q = query(scoresRef, orderBy('score', 'desc'), limit(50));
-      const querySnapshot = await getDocs(q);
-      const data = querySnapshot.docs.map(doc => doc.data());
-      setLeaderboard(data);
-      setGameState('scores');
+      const res = await fetch('/api/leaderboard');
+      if (res.ok) {
+        const data = await res.json();
+        setLeaderboard(data);
+        setGameState('scores');
+      }
     } catch (err) {
       console.error(err);
     }
@@ -162,7 +176,7 @@ export default function App() {
     
     if (correct) {
       sounds.playCorrect();
-      setScore(s => s + 10 * level);
+      setScore(s => Math.min(1000, s + 10 * level));
       const newStreak = streak + 1;
       setStreak(newStreak);
       
@@ -186,15 +200,18 @@ export default function App() {
           
           if (currentUser) {
             try {
-              await addDoc(collection(db, 'scores'), {
-                username: currentUser,
-                gameId: activeGame.id,
-                score: score, 
-                level: level,
-                date: new Date().toISOString()
-              });
+              fetch('/api/scores', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  username: currentUser,
+                  gameId: activeGame.id,
+                  score: score,
+                  level: level
+                })
+              }).catch(err => console.error('Error saving score:', err));
             } catch (err) {
-              console.error('Error saving score:', err);
+              console.error('Error invoking fetch for score:', err);
             }
           }
         }
@@ -257,6 +274,32 @@ export default function App() {
             </div>
 
             <form onSubmit={handleAuth} className="space-y-4">
+              {authMode === 'register' && (
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-slate-400 mb-1">Nombre</label>
+                    <input 
+                      type="text" 
+                      value={firstNameInput}
+                      onChange={e => setFirstNameInput(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Tu nombre"
+                      required
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-slate-400 mb-1">Apellido</label>
+                    <input 
+                      type="text" 
+                      value={lastNameInput}
+                      onChange={e => setLastNameInput(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Tu apellido"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-slate-400 mb-1">Nombre de Usuario</label>
                 <input 
@@ -374,23 +417,22 @@ export default function App() {
               <table className="w-full text-left">
                 <thead className="bg-slate-900/50">
                   <tr>
+                    <th className="p-4 font-semibold text-slate-300">Posición</th>
+                    <th className="p-4 font-semibold text-slate-300">Estudiante</th>
                     <th className="p-4 font-semibold text-slate-300">Usuario</th>
-                    <th className="p-4 font-semibold text-slate-300">Juego</th>
-                    <th className="p-4 font-semibold text-slate-300">Puntaje</th>
-                    <th className="p-4 font-semibold text-slate-300">Nivel</th>
-                    <th className="p-4 font-semibold text-slate-300">Fecha</th>
+                    <th className="p-4 font-semibold text-slate-300 text-center">Juegos</th>
+                    <th className="p-4 font-semibold text-slate-300 text-right">Puntaje Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700">
                   {leaderboard.map((item, idx) => {
-                    const game = games.find(g => g.id === item.gameId);
                     return (
                       <tr key={idx} className="hover:bg-slate-700/30 transition-colors">
-                        <td className="p-4 font-bold text-indigo-300">{item.username}</td>
-                        <td className="p-4">{game ? game.title : item.gameId}</td>
-                        <td className="p-4 font-black text-yellow-400">{item.score}</td>
-                        <td className="p-4">{item.level}</td>
-                        <td className="p-4 text-slate-400 text-sm">{new Date(item.date).toLocaleDateString()}</td>
+                        <td className="p-4 font-bold text-slate-400">#{idx + 1}</td>
+                        <td className="p-4 font-medium text-white">{item.firstName} {item.lastName}</td>
+                        <td className="p-4 font-bold text-indigo-300">@{item.username}</td>
+                        <td className="p-4 text-center">{item.totalGames}</td>
+                        <td className="p-4 font-black text-yellow-400 text-right text-xl">{item.totalScore}</td>
                       </tr>
                     );
                   })}
