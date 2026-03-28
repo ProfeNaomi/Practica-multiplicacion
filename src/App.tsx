@@ -92,12 +92,8 @@ export default function App() {
           return;
         }
         
-        const qName = query(usersRef, where('firstName', '==', firstNameInput), where('lastName', '==', lastNameInput));
-        const nameSnapshot = await getDocs(qName);
-        if (!nameSnapshot.empty) {
-          setAuthError('Ya existe una persona registrada con ese mismo Nombre y Apellido.');
-          return;
-        }
+        // Removed the first/lastName query because it requires a composite index in Firestore and causes a silent fail
+        // If the username is unique, we allow the registration.
 
         await addDoc(usersRef, {
           username: usernameInput,

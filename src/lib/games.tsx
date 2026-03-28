@@ -424,7 +424,8 @@ export const games: GameDef[] = [
       const generators = [
         () => {
           const base = randomInt(2, 5); const e1 = randomInt(1, 3); const e2 = randomInt(1, 3);
-          const answer = Math.pow(base, e1 + e2);
+          const answer = `${base}^${e1 + e2}`;
+          const options = shuffle([answer, `${base}^${e1 * e2}`, `${base * 2}^${e1 + e2}`, `${base}^${e1 + e2 + 1}`]);
           return {
             component: (
               <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-4 my-2">
@@ -433,12 +434,13 @@ export const games: GameDef[] = [
                 <div className="flex items-start"><span>{base}</span><span className="text-2xl mt-1">{e2}</span></div>
               </div>
             ),
-            answer, options: generateNumOptions(answer, Math.max(5, answer * 0.5))
+            answer, options
           };
         },
         () => {
           const base1 = randomInt(2, 5); const base2 = randomInt(2, 4); const e = randomInt(2, 3);
-          const answer = Math.pow(base1 * base2, e);
+          const answer = `${base1 * base2}^${e}`;
+          const options = shuffle([answer, `${base1 + base2}^${e}`, `${base1 * base2}^${e + 1}`, `${base1 * base2}^${e * 2}`]);
           return {
             component: (
               <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-4 my-2">
@@ -447,12 +449,13 @@ export const games: GameDef[] = [
                 <div className="flex items-start"><span>{base2}</span><span className="text-2xl mt-1">{e}</span></div>
               </div>
             ),
-            answer, options: generateNumOptions(answer, Math.max(5, answer * 0.5))
+            answer, options
           };
         },
         () => {
           const base = randomInt(2, 4); const e1 = randomInt(2, 3); const e2 = randomInt(2, 3);
-          const answer = Math.pow(base, e1 * e2);
+          const answer = `${base}^${e1 * e2}`;
+          const options = shuffle([answer, `${base}^${e1 + e2}`, `${base * 2}^${e1 * e2}`, `${base}^${e1 * e2 + 1}`]);
           return {
             component: (
               <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-1 my-2">
@@ -461,12 +464,13 @@ export const games: GameDef[] = [
                 <span>)</span><span className="text-2xl mt-1 ml-1">{e2}</span>
               </div>
             ),
-            answer, options: generateNumOptions(answer, Math.max(5, answer * 0.5))
+            answer, options
           };
         },
         () => {
           const base = randomInt(2, 5); const e1 = randomInt(3, 6); const e2 = randomInt(1, e1 - 1);
-          const answer = Math.pow(base, e1 - e2);
+          const answer = `${base}^${e1 - e2}`;
+          const options = shuffle([answer, `${base}^${e1 + e2}`, `${base}^${e1 - e2 + 1}`, `${base * 2}^${e1 - e2}`]);
           return {
             component: (
               <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-4 my-2">
@@ -475,12 +479,13 @@ export const games: GameDef[] = [
                 <div className="flex items-start"><span>{base}</span><span className="text-2xl mt-1">{e2}</span></div>
               </div>
             ),
-            answer, options: generateNumOptions(answer, Math.max(5, answer * 0.5))
+            answer, options
           };
         },
         () => {
           const b2 = randomInt(2, 5); const mult = randomInt(2, 5); const b1 = b2 * mult; const e = randomInt(2, 3);
-          const answer = Math.pow(b1 / b2, e);
+          const answer = `${b1 / b2}^${e}`;
+          const options = shuffle([answer, `${b1 - b2}^${e}`, `${b1 / b2}^${e + 1}`, `${b1 / b2 + 1}^${e}`]);
           return {
             component: (
               <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-4 my-2">
@@ -489,54 +494,52 @@ export const games: GameDef[] = [
                 <div className="flex items-start"><span>{b2}</span><span className="text-2xl mt-1">{e}</span></div>
               </div>
             ),
-            answer, options: generateNumOptions(answer, Math.max(2, answer * 0.5))
+            answer, options
           };
         },
         () => {
           const base = randomInt(11, 150);
+          const answer = `${base}`;
+          const options = shuffle([answer, `1`, `0`, `${base}^2`]);
           return {
             component: (
               <div className="flex items-start justify-center text-6xl font-black drop-shadow-xl gap-1 my-2">
                 <span>{base}</span><span className="text-3xl mt-1">1</span>
               </div>
             ),
-            answer: base, options: generateNumOptions(base, 10)
+            answer, options
           };
         },
         () => {
           const base = randomInt(5, 500);
+          const answer = `1`;
+          const options = shuffle([`1`, `0`, `${base}`, `${base}^1`]);
           return {
             component: (
               <div className="flex items-start justify-center text-6xl font-black drop-shadow-xl gap-1 my-2">
                 <span>{base}</span><span className="text-3xl mt-1">0</span>
               </div>
             ),
-            answer: 1, options: [0, 1, base, base * 10].sort(() => Math.random() - 0.5)
+            answer, options
           };
         },
         () => {
-          const base = randomInt(2, 5); const exp = randomInt(1, 3); const val = Math.pow(base, exp);
-          const answer = `1/${val}`; const options = new Set<string>([answer]);
-          options.add(`1/${val + randomInt(1, 4)}`); if (val !== 1) options.add(`${val}`); options.add(`-${val}`);
-          while(options.size < 4) options.add(`1/${val + randomInt(5, 15)}`);
+          const base = randomInt(2, 5); const exp = randomInt(1, 3);
+          const answer = `(1/${base})^${exp}`; 
+          const options = shuffle([answer, `1^${exp}`, `-(1/${base})^${exp}`, `(${base})^${exp}`]);
           return {
             component: (
               <div className="flex items-start justify-center text-6xl font-black drop-shadow-xl gap-1 my-2">
                 <span>{base}</span><span className="text-3xl mt-1">-{exp}</span>
               </div>
             ),
-            answer, options: shuffle(Array.from(options))
+            answer, options
           };
         },
         () => {
           const d = randomInt(3, 6); const n = randomInt(1, d - 1); const e = randomInt(2, 3);
-          const answer = `${Math.pow(n, e)}/${Math.pow(d, e)}`; const options = new Set<string>([answer]);
-          while(options.size < 4) {
-            let wd = randomInt(2, 10); let wn = randomInt(1, wd);
-            if (Math.pow(wn, e) !== Math.pow(n, e) && `${Math.pow(wn, e)}/${Math.pow(wd, e)}` !== answer) {
-              options.add(`${Math.pow(wn, e)}/${Math.pow(wd, e)}`);
-            }
-          }
+          const answer = `${Math.pow(n, e)}/${Math.pow(d, e)}`; 
+          const options = shuffle([answer, `${Math.pow(n, e*2)}/${Math.pow(d, e*2)}`, `${Math.pow(n+1, e)}/${Math.pow(d, e)}`, `${Math.pow(n, e)}/${Math.pow(d+1, e)}`]);
           return {
             component: (
               <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-2 my-2">
@@ -548,13 +551,14 @@ export const games: GameDef[] = [
                 <span>)</span><span className="text-2xl mt-1 -ml-1 self-start">{e}</span>
               </div>
             ),
-            answer, options: shuffle(Array.from(options))
+            answer, options
           };
         },
         () => {
           const decs = [0.1, 0.5, 1.5, 2.5, 0.2]; const base = decs[randomInt(0, decs.length - 1)];
           const e = base === 0.1 || base === 0.2 || base === 0.5 ? randomInt(2, 3) : 2;
-          const answer = Number(Math.pow(base, e).toFixed(3)); const options = new Set<number>([answer]);
+          const answer = Number(Math.pow(base, e).toFixed(3));
+          const options = new Set<number>([answer]);
           while(options.size < 4) {
             const wrong = Number((answer + randomInt(-5, 5) * (e===2? 0.01 : 0.001)).toFixed(3));
             if (wrong !== answer && wrong > 0) options.add(wrong);
