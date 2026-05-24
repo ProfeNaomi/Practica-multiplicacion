@@ -9,7 +9,7 @@ import { collection, query, where, getDocs, addDoc, orderBy, limit } from 'fireb
 import { db } from './lib/firebase';
 
 type AuthMode = 'login' | 'register';
-type GameState = 'auth' | 'menu' | 'start' | 'playing' | 'gameover' | 'scores' | 'settings';
+type GameState = 'auth' | 'menu' | 'start' | 'playing' | 'level_complete' | 'gameover' | 'scores' | 'settings';
 
 const MAX_LIVES = 3;
 const QUESTIONS_PER_LEVEL = 20;
@@ -250,13 +250,23 @@ export default function App() {
       
       if (newStreak >= QUESTIONS_PER_LEVEL) {
         sounds.playLevelUp();
-        setLevel(l => l + 1);
-        setStreak(0);
+        setGameState('level_complete');
         confetti({
           particleCount: 100,
           spread: 70,
           origin: { y: 0.6 }
         });
+        
+        if (currentUser) {
+          const cappedScore = Math.min(1000, score + 10 * level);
+          addDoc(collection(db, 'scores'), {
+            username: currentUser,
+            gameId: activeGame.id,
+            score: cappedScore,
+            level: level + 1,
+            date: new Date().toISOString()
+          }).catch(err => console.error('Error saving score to Firebase:', err));
+        }
       }
     } else {
       sounds.playWrong();
@@ -754,6 +764,7 @@ export default function App() {
 
                   <div className="mb-8 pl-1 pr-1">
                     <div className="flex justify-between text-sm font-medium mb-2 opacity-90">
+                      <span className="flex items-center gap-1 font-bold text-indigo-300">Pregunta: {streak + 1}/{QUESTIONS_PER_LEVEL}</span>
                       <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> Tiempo</span>
                       <span>{timeLeft}s</span>
                     </div>
@@ -848,6 +859,52 @@ export default function App() {
                     >
                       <RotateCcw className="w-6 h-6" />
                       Volver a Jugar
+                    </button>
+                    <button
+                      onClick={backToMenu}
+                      className="w-full py-4 bg-black/20 hover:bg-black/30 border border-white/30 text-white rounded-2xl font-bold text-xl shadow-lg transform transition active:scale-95 flex items-center justify-center gap-2"
+                    >
+                      <ArrowLeft className="w-6 h-6" />
+                      Menú Principal
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
+              {gameState === 'level_complete' && (
+                <motion.div
+                  key="level_complete"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="p-8 text-center"
+                >
+                  <div className="mb-6 flex justify-center">
+                    <div className="w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center">
+                      <Trophy className="w-12 h-12 text-green-400" fill="currentColor" />
+                    </div>
+                  </div>
+                  <h2 className="text-4xl font-bold mb-2 drop-shadow-md text-green-300">¡Nivel Superado!</h2>
+                  <p className="text-xl text-white/90 mb-6 drop-shadow-sm">Has completado el Nivel {level} con éxito.</p>
+                  
+                  <div className="bg-black/20 rounded-3xl p-6 mb-8 border border-white/10 shadow-inner">
+                    <div className="text-sm text-white/70 uppercase tracking-widest mb-1 font-semibold">Puntuación Actual</div>
+                    <div className="text-6xl font-black text-yellow-300 drop-shadow-[0_0_15px_rgba(253,224,71,0.4)]">{score}</div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <button
+                      onClick={() => {
+                        const nextLevelNum = level + 1;
+                        setLevel(nextLevelNum);
+                        setStreak(0);
+                        historyRef.current = new Set();
+                        setGameState('playing');
+                        nextQuestion(nextLevelNum);
+                      }}
+                      className="w-full py-4 bg-white text-slate-800 hover:bg-gray-100 rounded-2xl font-bold text-xl shadow-xl transform transition active:scale-95 flex items-center justify-center gap-2"
+                    >
+                      <Play className="w-6 h-6" fill="currentColor" />
+                      Siguiente Nivel
                     </button>
                     <button
                       onClick={backToMenu}
