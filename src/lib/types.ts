@@ -13,5 +13,6 @@ export interface GameDef {
   description: string;
   icon: React.ElementType;
   gradient: string;
+  category: 'Números' | 'Álgebra';
   generateQuestion: (level: number, history: Set<number>) => Question;
 }

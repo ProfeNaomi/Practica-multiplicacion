@@ -1,7 +1,7 @@
 import React from 'react';
 import { GameDef, Question } from './types';
 import { 
-  Plus, Minus, X, Divide, Calculator, Blocks, PieChart, Percent, Superscript, Radical, ArrowRightLeft, Baseline
+  Plus, Minus, X, Divide, Calculator, Blocks, PieChart, Percent, Superscript, Radical, ArrowRightLeft, Baseline, BookOpen, Variable
 } from 'lucide-react';
 import { FractionVisual } from '../components/FractionVisual';
 
@@ -43,6 +43,7 @@ export const games: GameDef[] = [
     description: 'Suma números, aumenta su dificultad progresivamente.',
     icon: Plus,
     gradient: 'from-blue-400 to-cyan-500',
+    category: 'Números',
     generateQuestion: (level) => {
       const max = Math.min(10 + level * 10, 500);
       const a = randomInt(1, max);
@@ -61,6 +62,7 @@ export const games: GameDef[] = [
     description: 'Resta números y mejora tu agilidad mental.',
     icon: Minus,
     gradient: 'from-orange-400 to-red-500',
+    category: 'Números',
     generateQuestion: (level) => {
       const max = Math.min(10 + level * 10, 500);
       const a = randomInt(5, max);
@@ -79,6 +81,7 @@ export const games: GameDef[] = [
     description: 'El clásico multiplicador rápido que ya conoces.',
     icon: X,
     gradient: 'from-purple-500 to-pink-500',
+    category: 'Números',
     generateQuestion: (level) => {
       let minTable = 2, maxTable = 5, minB = 2, maxB = 10;
       if (level === 1) { minTable = 2; maxTable = 5; minB = 2; maxB = 10; }
@@ -108,6 +111,7 @@ export const games: GameDef[] = [
     description: 'Practica la división sin restos.',
     icon: Divide,
     gradient: 'from-teal-400 to-emerald-500',
+    category: 'Números',
     generateQuestion: (level) => {
       const divisor = randomInt(2, Math.min(12 + Math.floor(level / 2), 20));
       const quotient = randomInt(2, Math.min(10 + level, 20));
@@ -125,6 +129,7 @@ export const games: GameDef[] = [
     description: 'Resuelve primero la multiplicación y luego la suma.',
     icon: Calculator,
     gradient: 'from-indigo-400 to-blue-600',
+    category: 'Números',
     generateQuestion: (level) => {
       const a = randomInt(2, Math.min(10 + level, 15));
       const b = randomInt(2, Math.min(10 + level, 15));
@@ -143,6 +148,7 @@ export const games: GameDef[] = [
     description: 'Operaciones combinadas de hasta 3 números (ej. 4÷2+5).',
     icon: Calculator,
     gradient: 'from-indigo-500 to-purple-600',
+    category: 'Números',
     generateQuestion: (level) => {
       const divisor = randomInt(2, Math.min(10 + Math.floor(level / 2), 15));
       const quotient = randomInt(2, Math.min(10 + level, 20));
@@ -171,6 +177,7 @@ export const games: GameDef[] = [
     description: 'Descompón un número en la multiplicación correcta.',
     icon: Blocks,
     gradient: 'from-yellow-400 to-orange-500',
+    category: 'Números',
     generateQuestion: (level, history) => {
       let a = 0, b = 0, product = 0;
       let attempts = 0;
@@ -206,6 +213,7 @@ export const games: GameDef[] = [
     description: '¿Qué fracción representa el dibujo?',
     icon: PieChart,
     gradient: 'from-rose-400 to-red-600',
+    category: 'Números',
     generateQuestion: (level) => {
       const denominator = randomInt(2, Math.min(12, 4 + level));
       const numerator = randomInt(1, denominator - 1);
@@ -235,6 +243,7 @@ export const games: GameDef[] = [
     description: 'Calcula cuánto es la fracción de una cantidad (ej. 2/5 de 1000).',
     icon: Percent,
     gradient: 'from-fuchsia-500 to-pink-600',
+    category: 'Números',
     generateQuestion: (level) => {
       const multipliers = [10, 20, 50, 100, 1000];
       const mult = multipliers[Math.min(level - 1, multipliers.length - 1)] || multipliers[randomInt(0, multipliers.length - 1)];
@@ -256,6 +265,7 @@ export const games: GameDef[] = [
     description: 'Calcula potencias con exponentes naturales (hasta 4).',
     icon: Superscript,
     gradient: 'from-lime-400 to-green-600',
+    category: 'Números',
     generateQuestion: (level) => {
       const exp = level <= 2 ? randomInt(2, 3) : randomInt(2, 4);
       let baseMax = 10;
@@ -283,6 +293,7 @@ export const games: GameDef[] = [
     description: 'Encuentra el número que multiplicado por sí mismo da el resultado.',
     icon: Radical,
     gradient: 'from-cyan-500 to-blue-600',
+    category: 'Números',
     generateQuestion: (level) => {
       const maxRoot = Math.min(5 + level * 2, 15);
       const root = randomInt(1, maxRoot);
@@ -301,6 +312,7 @@ export const games: GameDef[] = [
     description: 'Calcula porcentajes múltiplos de 10 (ej. 40% de 90).',
     icon: Percent,
     gradient: 'from-amber-400 to-amber-600',
+    category: 'Números',
     generateQuestion: (level) => {
       const p = randomInt(1, 9) * 10;
       const multipliers = [10, 20, 30, 40, 50, 100, 150, 200];
@@ -315,6 +327,7 @@ export const games: GameDef[] = [
     description: 'Calcula porcentajes múltiplos de 5.',
     icon: Percent,
     gradient: 'from-emerald-400 to-teal-600',
+    category: 'Números',
     generateQuestion: (level) => {
       const p = randomInt(1, 19) * 5;
       const multipliers = [20, 40, 60, 80, 100, 120, 200];
@@ -329,6 +342,7 @@ export const games: GameDef[] = [
     description: 'Calcula cualquier porcentaje del 1% al 100%.',
     icon: Percent,
     gradient: 'from-blue-500 to-indigo-600',
+    category: 'Números',
     generateQuestion: (level) => {
       const p = randomInt(1, 99);
       const multipliers = [100, 200, 300, 400, 500, 1000];
@@ -343,6 +357,7 @@ export const games: GameDef[] = [
     description: 'Convierte fracciones a números decimales.',
     icon: ArrowRightLeft,
     gradient: 'from-violet-500 to-purple-700',
+    category: 'Números',
     generateQuestion: (level) => {
       const denoms = [2, 4, 5, 8, 10];
       const d = denoms[randomInt(0, Math.min(level + 1, denoms.length - 1))];
@@ -362,6 +377,7 @@ export const games: GameDef[] = [
     description: 'Convierte números decimales a fracciones simples.',
     icon: ArrowRightLeft,
     gradient: 'from-pink-500 to-rose-600',
+    category: 'Números',
     generateQuestion: (level) => {
       const denoms = [2, 4, 5, 10];
       const d = denoms[randomInt(0, Math.min(level, denoms.length - 1))];
@@ -388,6 +404,7 @@ export const games: GameDef[] = [
     description: 'Transforma el porcentaje en una fracción con denominador 100.',
     icon: Baseline,
     gradient: 'from-cyan-500 to-blue-500',
+    category: 'Números',
     generateQuestion: (level) => {
       const p = randomInt(1, 99);
       const answer = `${p}/100`;
@@ -407,6 +424,7 @@ export const games: GameDef[] = [
     description: 'Transforma el porcentaje en la fracción más pequeña (simplificada).',
     icon: Baseline,
     gradient: 'from-fuchsia-500 to-purple-600',
+    category: 'Números',
     generateQuestion: (level) => {
       const p = randomInt(1, 19) * 5; // like 5, 25, 40, etc
       const g = gcd(p, 100);
@@ -430,6 +448,7 @@ export const games: GameDef[] = [
     description: 'Aplica todas las propiedades (multiplicación, división, potencia de potencia, exponente cero, negativo, etc).',
     icon: Superscript,
     gradient: 'from-blue-500 to-indigo-600',
+    category: 'Números',
     generateQuestion: (level) => {
       const generators = [
         () => {
@@ -594,6 +613,7 @@ export const games: GameDef[] = [
     description: 'Encuentra qué potencia equivale al número grande mostrado.',
     icon: Superscript,
     gradient: 'from-sky-500 to-blue-600',
+    category: 'Números',
     generateQuestion: (level) => {
       const bases = [2, 3, 4, 5];
       const exps = [2, 3, 4, 5, 6];
@@ -621,6 +641,109 @@ export const games: GameDef[] = [
         text: num.toString(),
         answer,
         options: shuffle(Array.from(options))
+      };
+    }
+  },
+  {
+    id: 'lenguaje-algebraico',
+    title: 'Lenguaje Algebraico',
+    description: 'Traduce frases a expresiones matemáticas.',
+    icon: BookOpen,
+    gradient: 'from-fuchsia-500 to-purple-600',
+    category: 'Álgebra',
+    generateQuestion: (level) => {
+      const phrases = [
+        { text: "El doble de un número", answer: "2x", wrong: ["x + 2", "x/2", "x²"] },
+        { text: "El cuadrado de un número", answer: "x²", wrong: ["2x", "x + 2", "x/2"] },
+        { text: "La mitad de un número", answer: "x/2", wrong: ["2x", "x - 2", "x²"] },
+        { text: "La suma de dos números distintos", answer: "x + y", wrong: ["2x", "x + x", "xy"] },
+        { text: "El producto de dos números distintos", answer: "xy", wrong: ["x + y", "2xy", "x/y"] },
+        { text: "El cubo de un número", answer: "x³", wrong: ["3x", "x²", "x/3"] },
+        { text: "Un número aumentado en 5", answer: "x + 5", wrong: ["5x", "x - 5", "x/5"] },
+        { text: "El doble de la suma de dos números", answer: "2(x + y)", wrong: ["2x + y", "x + 2y", "2xy"] },
+        { text: "El cuadrado de la suma de dos números", answer: "(x + y)²", wrong: ["x² + y²", "2(x + y)", "x² + y"] },
+        { text: "La diferencia de dos cuadrados", answer: "x² - y²", wrong: ["(x - y)²", "x - y", "2x - 2y"] },
+        { text: "El triple de la diferencia de dos números", answer: "3(x - y)", wrong: ["3x - y", "x - 3y", "3xy"] },
+        { text: "Un número disminuido en su mitad", answer: "x - x/2", wrong: ["x/2", "x - 2", "2x - x"] }
+      ];
+      const maxIndex = Math.min(phrases.length - 1, 3 + level);
+      const q = phrases[randomInt(0, maxIndex)];
+      
+      const options = new Set<string>([q.answer]);
+      q.wrong.forEach(w => options.add(w));
+      while(options.size < 4) {
+        const randQ = phrases[randomInt(0, phrases.length - 1)];
+        if (randQ.answer !== q.answer) options.add(randQ.answer);
+      }
+
+      return {
+        text: q.text,
+        answer: q.answer,
+        options: shuffle(Array.from(options))
+      };
+    }
+  },
+  {
+    id: 'productos-notables',
+    title: 'Productos Notables',
+    description: 'Identifica el desarrollo correcto.',
+    icon: Variable,
+    gradient: 'from-violet-500 to-indigo-600',
+    category: 'Álgebra',
+    generateQuestion: (level) => {
+      const type = randomInt(1, Math.min(4, Math.ceil(level / 2)));
+      const a = randomInt(1, 10);
+      const b = randomInt(1, 10);
+      
+      let text = "";
+      let answer = "";
+      let wrongOptions: string[] = [];
+      
+      if (type === 1) {
+        // (x + a)^2
+        text = `(x + ${a})²`;
+        answer = `x² + ${2*a}x + ${a*a}`;
+        wrongOptions = [
+          `x² + ${a*a}`, 
+          `x² + ${a}x + ${a*a}`, 
+          `x² + ${2*a}x + ${2*a}`
+        ];
+      } else if (type === 2) {
+        // (x - a)^2
+        text = `(x - ${a})²`;
+        answer = `x² - ${2*a}x + ${a*a}`;
+        wrongOptions = [
+          `x² - ${a*a}`, 
+          `x² + ${2*a}x + ${a*a}`, 
+          `x² - ${a}x + ${a*a}`
+        ];
+      } else if (type === 3) {
+        // (x + a)(x - a)
+        text = `(x + ${a})(x - ${a})`;
+        answer = `x² - ${a*a}`;
+        wrongOptions = [
+          `x² + ${a*a}`, 
+          `x² - ${2*a}`, 
+          `x² - ${a}x - ${a*a}`
+        ];
+      } else {
+        // (x + a)(x + b)
+        text = `(x + ${a})(x + ${b})`;
+        answer = `x² + ${a+b}x + ${a*b}`;
+        wrongOptions = [
+          `x² + ${a*b}x + ${a+b}`, 
+          `x² + ${Math.abs(a-b)}x + ${a*b}`, 
+          `x² + ${a+b}x + ${a+b}`
+        ];
+      }
+      
+      const options = new Set<string>([answer]);
+      wrongOptions.forEach(w => options.add(w));
+      
+      return {
+        text,
+        answer,
+        options: shuffle(Array.from(options)).slice(0, 4)
       };
     }
   }

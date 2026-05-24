@@ -1,15 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, Star, Clock, Trophy, Play, RotateCcw, ArrowLeft, LogOut, ListOrdered, X, Settings } from 'lucide-react';
+import { Heart, Star, Clock, Trophy, Play, RotateCcw, ArrowLeft, LogOut, ListOrdered, X, Settings, Users, Search } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { sounds } from './lib/sounds';
 import { games } from './lib/games';
 import { GameDef, Question } from './lib/types';
+import { TeacherDashboard } from './components/TeacherDashboard';
 import { collection, query, where, getDocs, addDoc, orderBy, limit } from 'firebase/firestore';
 import { db } from './lib/firebase';
 
 type AuthMode = 'login' | 'register';
-type GameState = 'auth' | 'menu' | 'start' | 'playing' | 'level_complete' | 'gameover' | 'scores' | 'settings';
+type GameState = 'auth' | 'menu' | 'start' | 'playing' | 'level_complete' | 'gameover' | 'scores' | 'settings' | 'teacher_dashboard';
 
 const MAX_LIVES = 3;
 const QUESTIONS_PER_LEVEL = 20;
@@ -18,6 +19,7 @@ export default function App() {
   const [gameState, setGameState] = useState<GameState>('auth');
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<string>('student');
   
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
@@ -54,6 +56,13 @@ export default function App() {
     if (savedUser) {
       setCurrentUser(savedUser);
       setGameState('menu');
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('username', '==', savedUser));
+      getDocs(q).then(snapshot => {
+        if (!snapshot.empty) {
+          setCurrentUserRole(snapshot.docs[0].data().role || 'student');
+        }
+      }).catch(console.error);
     }
     const savedTime = localStorage.getItem('calculo_mental_time');
     if (savedTime) {
@@ -82,6 +91,7 @@ export default function App() {
         
         localStorage.setItem('calculo_mental_user', userDoc.username);
         setCurrentUser(userDoc.username);
+        setCurrentUserRole(userDoc.role || 'student');
         setGameState('menu');
         setUsernameInput('');
         setPasswordInput('');
@@ -120,6 +130,7 @@ export default function App() {
         setTimeout(() => {
           localStorage.setItem('calculo_mental_user', usernameInput);
           setCurrentUser(usernameInput);
+          setCurrentUserRole('student');
           setGameState('menu');
           setUsernameInput('');
           setPasswordInput('');
@@ -606,6 +617,11 @@ export default function App() {
               Hola, <span className="text-indigo-400">{currentUser || 'Invitado'}</span> 👋
             </div>
             <div className="flex flex-wrap items-center justify-center gap-2">
+              {currentUserRole === 'teacher' && (
+                <button onClick={() => setGameState('teacher_dashboard')} className="flex items-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-colors font-medium text-sm sm:text-base shadow-lg">
+                  <Users className="w-5 h-5 text-white" /> Panel Profesor
+                </button>
+              )}
               <button onClick={() => setGameState('settings')} className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl transition-colors font-medium text-sm sm:text-base">
                 <Settings className="w-5 h-5 text-slate-300" /> Configuración
               </button>
@@ -632,28 +648,41 @@ export default function App() {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-            {games.map(game => {
-              const Icon = game.icon;
-              return (
-                <motion.button
-                  key={game.id}
-                  whileHover={{ scale: 1.05, y: -5 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => selectGame(game.id)}
-                  className={`bg-gradient-to-br ${game.gradient} p-5 rounded-3xl shadow-xl text-left relative overflow-hidden group border border-white/10`}
-                >
-                  <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <Icon className="w-10 h-10 mb-3 text-white drop-shadow-md" />
-                  <h3 className="text-xl font-bold mb-2 drop-shadow-sm leading-tight">{game.title}</h3>
-                  <p className="text-xs text-white/90 drop-shadow-sm line-clamp-3 leading-relaxed">
-                    {game.description}
-                  </p>
-                </motion.button>
-              )
-            })}
-          </div>
+          {['Números', 'Álgebra'].map(category => {
+            const categoryGames = games.filter(g => g.category === category);
+            if (categoryGames.length === 0) return null;
+            return (
+              <div key={category} className="mb-10">
+                <h2 className="text-3xl font-bold text-white mb-6 pl-4 border-l-4 border-indigo-500">{category}</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+                  {categoryGames.map(game => {
+                    const Icon = game.icon;
+                    return (
+                      <motion.button
+                        key={game.id}
+                        whileHover={{ scale: 1.05, y: -5 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => selectGame(game.id)}
+                        className={`bg-gradient-to-br ${game.gradient} p-5 rounded-3xl shadow-xl text-left relative overflow-hidden group border border-white/10 flex flex-col`}
+                      >
+                        <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <Icon className="w-10 h-10 mb-3 text-white drop-shadow-md" />
+                        <h3 className="text-xl font-bold mb-2 drop-shadow-sm leading-tight flex-1">{game.title}</h3>
+                        <p className="text-xs text-white/90 drop-shadow-sm line-clamp-3 leading-relaxed">
+                          {game.description}
+                        </p>
+                      </motion.button>
+                    )
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </motion.div>
+      )}
+
+      {gameState === 'teacher_dashboard' && (
+        <TeacherDashboard onBack={() => setGameState('menu')} />
       )}
 
       {['start', 'playing', 'gameover'].includes(gameState) && activeGame && (
