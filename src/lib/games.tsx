@@ -80,10 +80,20 @@ export const games: GameDef[] = [
     icon: X,
     gradient: 'from-purple-500 to-pink-500',
     generateQuestion: (level) => {
-      const maxTable = Math.min(3 + Math.floor(level * 1.5), 15);
-      const minTable = Math.max(2, maxTable - 4);
+      let minTable = 2, maxTable = 5, minB = 2, maxB = 10;
+      if (level === 1) { minTable = 2; maxTable = 5; minB = 2; maxB = 10; }
+      else if (level === 2) { minTable = 3; maxTable = 6; minB = 3; maxB = 10; }
+      else if (level === 3) { minTable = 4; maxTable = 7; minB = 3; maxB = 10; }
+      else if (level === 4) { minTable = 5; maxTable = 8; minB = 4; maxB = 10; }
+      else if (level === 5) { minTable = 6; maxTable = 9; minB = 4; maxB = 10; }
+      else if (level === 6) { minTable = 7; maxTable = 10; minB = 5; maxB = 10; }
+      else if (level === 7) { minTable = 8; maxTable = 12; minB = 6; maxB = 12; }
+      else if (level === 8) { minTable = 9; maxTable = 15; minB = 7; maxB = 15; }
+      else if (level === 9) { minTable = 11; maxTable = 15; minB = 8; maxB = 15; }
+      else { minTable = 12; maxTable = 20; minB = 11; maxB = 20; }
+      
       const a = randomInt(minTable, maxTable);
-      const b = randomInt(2, Math.min(10 + Math.floor(level / 2), 15));
+      const b = randomInt(minB, maxB);
       const answer = a * b;
       return {
         text: `${a} × ${b}`,

@@ -12,7 +12,7 @@ type AuthMode = 'login' | 'register';
 type GameState = 'auth' | 'menu' | 'start' | 'playing' | 'gameover' | 'scores' | 'settings';
 
 const MAX_LIVES = 3;
-const QUESTIONS_PER_LEVEL = 5;
+const QUESTIONS_PER_LEVEL = 20;
 
 export default function App() {
   const [gameState, setGameState] = useState<GameState>('auth');
@@ -26,8 +26,12 @@ export default function App() {
   const [emailInput, setEmailInput] = useState('');
   const [authError, setAuthError] = useState('');
   const [authSuccess, setAuthSuccess] = useState('');
+  const [courseInput, setCourseInput] = useState('');
+  const [letterInput, setLetterInput] = useState('');
 
   const [activeGameId, setActiveGameId] = useState<string | null>(null);
+  const [maxLevel, setMaxLevel] = useState(1);
+  const [selectedLevel, setSelectedLevel] = useState(1);
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(MAX_LIVES);
   const [level, setLevel] = useState(1);
@@ -83,8 +87,12 @@ export default function App() {
         setPasswordInput('');
       } else {
         // Register
-        if (!firstNameInput || !lastNameInput || !emailInput) {
+        if (!firstNameInput || !lastNameInput || !emailInput || !courseInput || !letterInput) {
           setAuthError('Por favor completa todos los campos.');
+          return;
+        }
+        if (!emailInput.toLowerCase().includes('lbn')) {
+          setAuthError('Solo se permiten correos institucionales LBN.');
           return;
         }
         if (!querySnapshot.empty) {
@@ -101,6 +109,9 @@ export default function App() {
           password: passwordInput,
           firstName: firstNameInput,
           lastName: lastNameInput,
+          course: courseInput,
+          letter: letterInput,
+          role: 'student',
           createdAt: new Date().toISOString()
         });
         
@@ -115,6 +126,8 @@ export default function App() {
           setFirstNameInput('');
           setLastNameInput('');
           setEmailInput('');
+          setCourseInput('');
+          setLetterInput('');
           setAuthSuccess('');
         }, 3500);
       }
@@ -178,8 +191,22 @@ export default function App() {
     }
   };
 
-  const selectGame = (gameId: string) => {
+  const selectGame = async (gameId: string) => {
     setActiveGameId(gameId);
+    let maxReached = 1;
+    if (currentUser) {
+      try {
+        const scoresRef = collection(db, 'scores');
+        const q = query(scoresRef, where('username', '==', currentUser), where('gameId', '==', gameId));
+        const qs = await getDocs(q);
+        qs.forEach(doc => {
+          const l = doc.data().level || 1;
+          if (l > maxReached) maxReached = l;
+        });
+      } catch(e) { console.error(e); }
+    }
+    setMaxLevel(Math.min(10, maxReached));
+    setSelectedLevel(Math.min(10, maxReached));
     setGameState('start');
   };
 
@@ -188,10 +215,10 @@ export default function App() {
     setGameState('playing');
     setScore(0);
     setLives(MAX_LIVES);
-    setLevel(1);
+    setLevel(selectedLevel);
     setStreak(0);
     historyRef.current = new Set();
-    nextQuestion(1);
+    nextQuestion(selectedLevel);
   };
 
   const backToMenu = () => {
@@ -372,9 +399,43 @@ export default function App() {
                       value={emailInput}
                       onChange={e => setEmailInput(e.target.value)}
                       className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="correo@colegio.edu"
+                      placeholder="correo@lbn.cl"
                       required
                     />
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-slate-400 mb-1">Curso</label>
+                      <select 
+                        value={courseInput}
+                        onChange={e => setCourseInput(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                        required
+                      >
+                        <option value="">Selecciona</option>
+                        <option value="7mo Básico">7mo Básico</option>
+                        <option value="8vo Básico">8vo Básico</option>
+                        <option value="1ro Medio">1ro Medio</option>
+                        <option value="2do Medio">2do Medio</option>
+                        <option value="3ro Medio">3ro Medio</option>
+                        <option value="4to Medio">4to Medio</option>
+                      </select>
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-slate-400 mb-1">Letra</label>
+                      <select 
+                        value={letterInput}
+                        onChange={e => setLetterInput(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                        required
+                      >
+                        <option value="">Letra</option>
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="D">D</option>
+                      </select>
+                    </div>
                   </div>
                 </>
               )}
@@ -551,10 +612,14 @@ export default function App() {
           </div>
 
           <div className="text-center mb-8">
-            <h1 className="text-5xl font-black mb-3 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-              Matemáticas Divertidas
+            <h1 className="text-5xl font-black mb-4 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              Desarrollo del Pensamiento Mental
             </h1>
-            <p className="text-lg text-slate-400">Selecciona un juego para comenzar a practicar</p>
+            <p className="text-lg text-slate-300 max-w-3xl mx-auto leading-relaxed">
+              Es importante evitar los errores de cálculo porque eso va a incurrir en errores en tu respuesta final. 
+              Por lo que hay que tener súper claro cómo calcular una multiplicación, división y otras operaciones básicas. 
+              <br/><span className="text-indigo-300 font-semibold mt-2 block">¡Entrena tu mente y conviértete en un experto!</span>
+            </p>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
@@ -606,9 +671,36 @@ export default function App() {
                     </div>
                   </div>
                   <h1 className="text-4xl font-bold mb-4 tracking-tight drop-shadow-md">{activeGame.title}</h1>
-                  <p className="text-lg text-white/90 mb-8 drop-shadow-sm leading-snug">
-                    {activeGame.description} ¡Tienes {timeLimit} segundos por pregunta!
+                  <p className="text-lg text-white/90 mb-4 drop-shadow-sm leading-snug">
+                    {activeGame.description}
                   </p>
+                  
+                  <div className="bg-black/20 rounded-2xl p-4 mb-6 backdrop-blur-sm border border-white/10">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-white/80 mb-3">Nivel a jugar</h3>
+                    <div className="grid grid-cols-5 gap-2">
+                      {[...Array(10)].map((_, i) => {
+                        const levelNum = i + 1;
+                        const isUnlocked = levelNum <= maxLevel;
+                        return (
+                          <button
+                            key={levelNum}
+                            disabled={!isUnlocked}
+                            onClick={() => setSelectedLevel(levelNum)}
+                            className={`py-2 rounded-xl font-bold transition-all ${
+                              selectedLevel === levelNum 
+                                ? 'bg-white text-indigo-900 shadow-lg scale-110' 
+                                : isUnlocked 
+                                  ? 'bg-white/20 hover:bg-white/30 text-white' 
+                                  : 'bg-black/10 text-white/30 cursor-not-allowed'
+                            }`}
+                          >
+                            {levelNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <button
                     onClick={startGame}
                     className="w-full py-4 bg-white/20 hover:bg-white/30 border border-white/40 text-white rounded-2xl font-bold text-xl shadow-lg transform transition active:scale-95 flex items-center justify-center gap-2"
