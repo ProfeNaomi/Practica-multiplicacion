@@ -720,7 +720,7 @@ export default function App() {
                       {[...Array(5)].map((_, i) => {
                         const levelNum = i + 1;
                         const isUnlocked = levelNum <= maxLevel;
-                        const starsEarned = activeGame && progress[activeGame.id] && progress[activeGame.id][levelNum] ? progress[activeGame.id][levelNum] : 0;
+                        const starsEarned = activeGame && progress?.[activeGame.id]?.[levelNum] ? progress[activeGame.id][levelNum] : 0;
                         return (
                           <button
                             key={levelNum}

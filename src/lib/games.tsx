@@ -747,4 +747,292 @@ export const games: GameDef[] = [
       };
     }
   }
+,
+  {
+    id: 'suma-enteros',
+    title: 'Suma de Enteros',
+    description: 'Suma números positivos y negativos.',
+    icon: Plus,
+    gradient: 'from-blue-600 to-indigo-700',
+    category: 'Números Enteros',
+    generateQuestion: (level) => {
+      const max = Math.min(10 + level * 5, 50);
+      const a = randomInt(-max, max);
+      const b = randomInt(-max, max);
+      const answer = a + b;
+      const bStr = b < 0 ? `(${b})` : `${b}`;
+      return {
+        text: `${a} + ${bStr}`,
+        answer,
+        options: generateNumOptions(answer, Math.max(5, Math.floor(Math.abs(answer) * 0.5)), true)
+      };
+    }
+  },
+  {
+    id: 'resta-enteros',
+    title: 'Resta de Enteros',
+    description: 'Resta números positivos y negativos.',
+    icon: Minus,
+    gradient: 'from-red-500 to-rose-700',
+    category: 'Números Enteros',
+    generateQuestion: (level) => {
+      const max = Math.min(10 + level * 5, 50);
+      const a = randomInt(-max, max);
+      const b = randomInt(-max, max);
+      const answer = a - b;
+      const bStr = b < 0 ? `(${b})` : `${b}`;
+      return {
+        text: `${a} - ${bStr}`,
+        answer,
+        options: generateNumOptions(answer, Math.max(5, Math.floor(Math.abs(answer) * 0.5)), true)
+      };
+    }
+  },
+  {
+    id: 'multiplicacion-enteros',
+    title: 'Multiplicación de Enteros',
+    description: 'Aplica la regla de los signos en la multiplicación.',
+    icon: X,
+    gradient: 'from-purple-600 to-fuchsia-700',
+    category: 'Números Enteros',
+    generateQuestion: (level) => {
+      const max = Math.min(5 + level * 2, 12);
+      const a = randomInt(-max, max) || 1;
+      const b = randomInt(-max, max) || -1;
+      const answer = a * b;
+      const bStr = b < 0 ? `(${b})` : `${b}`;
+      return {
+        text: `${a} × ${bStr}`,
+        answer,
+        options: generateNumOptions(answer, 15, true)
+      };
+    }
+  },
+  {
+    id: 'division-enteros',
+    title: 'División de Enteros',
+    description: 'Aplica la regla de los signos en divisiones exactas.',
+    icon: Divide,
+    gradient: 'from-teal-600 to-emerald-700',
+    category: 'Números Enteros',
+    generateQuestion: (level) => {
+      const divisor = (randomInt(2, Math.min(10 + level, 12))) * (Math.random() > 0.5 ? 1 : -1);
+      const quotient = (randomInt(2, Math.min(10 + level, 12))) * (Math.random() > 0.5 ? 1 : -1);
+      const dividend = divisor * quotient;
+      const divStr = divisor < 0 ? `(${divisor})` : `${divisor}`;
+      return {
+        text: `${dividend} ÷ ${divStr}`,
+        answer: quotient,
+        options: generateNumOptions(quotient, 5, true)
+      };
+    }
+  },
+  {
+    id: 'combinada-enteros-1',
+    title: 'Combinada: Suma y Resta',
+    description: 'Operaciones combinadas de suma y resta con enteros.',
+    icon: Calculator,
+    gradient: 'from-slate-600 to-gray-800',
+    category: 'Números Enteros',
+    generateQuestion: (level) => {
+      const a = randomInt(-15, 15);
+      const b = randomInt(-15, 15);
+      const c = randomInt(-15, 15);
+      const op1 = Math.random() > 0.5 ? '+' : '-';
+      const op2 = Math.random() > 0.5 ? '+' : '-';
+      
+      let answer = a;
+      if (op1 === '+') answer += b; else answer -= b;
+      if (op2 === '+') answer += c; else answer -= c;
+      
+      const bStr = b < 0 ? `(${b})` : `${b}`;
+      const cStr = c < 0 ? `(${c})` : `${c}`;
+      
+      return {
+        text: `${a} ${op1} ${bStr} ${op2} ${cStr}`,
+        answer,
+        options: generateNumOptions(answer, 10, true)
+      };
+    }
+  },
+  {
+    id: 'suma-racionales',
+    title: 'Suma de Fracciones',
+    description: 'Suma fracciones con igual o distinto denominador.',
+    icon: Plus,
+    gradient: 'from-pink-500 to-rose-600',
+    category: 'Números Racionales',
+    generateQuestion: (level) => {
+      const d1 = randomInt(2, 5 + level);
+      const d2 = randomInt(2, 5 + level);
+      const n1 = randomInt(1, d1);
+      const n2 = randomInt(1, d2);
+      const commonD = d1 * d2;
+      const num = (n1 * d2) + (n2 * d1);
+      const g = gcd(num, commonD);
+      const answer = `${num/g}/${commonD/g}`;
+      
+      const options = new Set<string>([answer]);
+      while (options.size < 4) {
+        let wn = randomInt(1, num + 5);
+        let wd = randomInt(2, commonD + 5);
+        let wg = gcd(wn, wd);
+        let wrong = `${wn/wg}/${wd/wg}`;
+        if (wrong !== answer) options.add(wrong);
+      }
+      return {
+        component: (
+          <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-4 my-2">
+            <div className="flex flex-col items-center">
+              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">${n1}</span>
+              <span className="px-3 pt-2 leading-none">${d1}</span>
+            </div>
+            <span>+</span>
+            <div className="flex flex-col items-center">
+              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">${n2}</span>
+              <span className="px-3 pt-2 leading-none">${d2}</span>
+            </div>
+          </div>
+        ),
+        answer,
+        options: shuffle(Array.from(options))
+      };
+    }
+  },
+  {
+    id: 'resta-racionales',
+    title: 'Resta de Fracciones',
+    description: 'Resta fracciones, simplificando el resultado.',
+    icon: Minus,
+    gradient: 'from-orange-500 to-red-600',
+    category: 'Números Racionales',
+    generateQuestion: (level) => {
+      let d1 = randomInt(2, 5 + level);
+      let d2 = randomInt(2, 5 + level);
+      let n1 = randomInt(2, d1 + 3);
+      let n2 = randomInt(1, d2);
+      if (n1/d1 < n2/d2) {
+        let temp = n1; n1 = n2; n2 = temp;
+        temp = d1; d1 = d2; d2 = temp;
+      }
+      const commonD = d1 * d2;
+      const num = (n1 * d2) - (n2 * d1);
+      const g = gcd(Math.abs(num), commonD);
+      const answer = `${num/g}/${commonD/g}`;
+      
+      const options = new Set<string>([answer]);
+      while (options.size < 4) {
+        let wn = randomInt(1, Math.max(2, num + 5));
+        let wd = randomInt(2, commonD + 5);
+        let wg = gcd(wn, wd);
+        let wrong = `${wn/wg}/${wd/wg}`;
+        if (wrong !== answer) options.add(wrong);
+      }
+      return {
+        component: (
+          <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-4 my-2">
+            <div className="flex flex-col items-center">
+              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">${n1}</span>
+              <span className="px-3 pt-2 leading-none">${d1}</span>
+            </div>
+            <span>-</span>
+            <div className="flex flex-col items-center">
+              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">${n2}</span>
+              <span className="px-3 pt-2 leading-none">${d2}</span>
+            </div>
+          </div>
+        ),
+        answer,
+        options: shuffle(Array.from(options))
+      };
+    }
+  },
+  {
+    id: 'multiplicacion-racionales',
+    title: 'Multiplicación de Fracciones',
+    description: 'Multiplica numeradores y denominadores.',
+    icon: X,
+    gradient: 'from-purple-500 to-indigo-600',
+    category: 'Números Racionales',
+    generateQuestion: (level) => {
+      const d1 = randomInt(2, 5 + level);
+      const d2 = randomInt(2, 5 + level);
+      const n1 = randomInt(1, d1 + 2);
+      const n2 = randomInt(1, d2 + 2);
+      const num = n1 * n2;
+      const den = d1 * d2;
+      const g = gcd(num, den);
+      const answer = `${num/g}/${den/g}`;
+      
+      const options = new Set<string>([answer]);
+      while (options.size < 4) {
+        let wn = randomInt(1, num + 5);
+        let wd = randomInt(2, den + 5);
+        let wg = gcd(wn, wd);
+        let wrong = `${wn/wg}/${wd/wg}`;
+        if (wrong !== answer) options.add(wrong);
+      }
+      return {
+        component: (
+          <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-4 my-2">
+            <div className="flex flex-col items-center">
+              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">${n1}</span>
+              <span className="px-3 pt-2 leading-none">${d1}</span>
+            </div>
+            <span>×</span>
+            <div className="flex flex-col items-center">
+              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">${n2}</span>
+              <span className="px-3 pt-2 leading-none">${d2}</span>
+            </div>
+          </div>
+        ),
+        answer,
+        options: shuffle(Array.from(options))
+      };
+    }
+  },
+  {
+    id: 'division-racionales',
+    title: 'División de Fracciones',
+    description: 'Multiplica cruzado para dividir fracciones.',
+    icon: Divide,
+    gradient: 'from-emerald-500 to-teal-600',
+    category: 'Números Racionales',
+    generateQuestion: (level) => {
+      const d1 = randomInt(2, 5 + level);
+      const d2 = randomInt(2, 5 + level);
+      const n1 = randomInt(1, d1 + 2);
+      const n2 = randomInt(1, d2 + 2);
+      const num = n1 * d2;
+      const den = d1 * n2;
+      const g = gcd(num, den);
+      const answer = `${num/g}/${den/g}`;
+      
+      const options = new Set<string>([answer]);
+      while (options.size < 4) {
+        let wn = randomInt(1, num + 5);
+        let wd = randomInt(2, den + 5);
+        let wg = gcd(wn, wd);
+        let wrong = `${wn/wg}/${wd/wg}`;
+        if (wrong !== answer) options.add(wrong);
+      }
+      return {
+        component: (
+          <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-4 my-2">
+            <div className="flex flex-col items-center">
+              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">${n1}</span>
+              <span className="px-3 pt-2 leading-none">${d1}</span>
+            </div>
+            <span>÷</span>
+            <div className="flex flex-col items-center">
+              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">${n2}</span>
+              <span className="px-3 pt-2 leading-none">${d2}</span>
+            </div>
+          </div>
+        ),
+        answer,
+        options: shuffle(Array.from(options))
+      };
+    }
+  }
 ];
