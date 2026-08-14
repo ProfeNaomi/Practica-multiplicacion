@@ -39,6 +39,16 @@ export default function App() {
   const [level, setLevel] = useState(1);
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const [correctAnswers, setCorrectAnswers] = useState(0);
+  const [progress, setProgress] = useState<Record<string, Record<number, number>>>({});
+  
+  useEffect(() => {
+    const savedProgress = localStorage.getItem('calculo_mental_progress');
+    if (savedProgress) {
+      try {
+        setProgress(JSON.parse(savedProgress));
+      } catch(e) { console.error(e); }
+    }
+  }, []);
   const [timeLimit, setTimeLimit] = useState(7);
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const [question, setQuestion] = useState<Question | null>(null);
