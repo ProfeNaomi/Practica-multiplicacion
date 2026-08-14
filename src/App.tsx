@@ -12,7 +12,7 @@ import { db } from './lib/firebase';
 type AuthMode = 'login' | 'register';
 type GameState = 'auth' | 'menu' | 'start' | 'playing' | 'level_complete' | 'gameover' | 'scores' | 'settings' | 'teacher_dashboard';
 
-const MAX_LIVES = 3;
+const MAX_LIVES = 5;
 const QUESTIONS_PER_LEVEL = 20;
 
 export default function App() {
@@ -648,7 +648,7 @@ export default function App() {
             </p>
           </div>
           
-          {['Números', 'Álgebra'].map(category => {
+          {['Números Naturales', 'Números Enteros', 'Números Racionales', 'Álgebra'].map(category => {
             const categoryGames = games.filter(g => g.category === category);
             if (categoryGames.length === 0) return null;
             return (
@@ -793,7 +793,7 @@ export default function App() {
 
                   <div className="mb-8 pl-1 pr-1">
                     <div className="flex justify-between text-sm font-medium mb-2 opacity-90">
-                      <span className="flex items-center gap-1 font-bold text-indigo-300">Pregunta: {streak + 1}/{QUESTIONS_PER_LEVEL}</span>
+                      <span className="flex items-center gap-1 font-bold text-indigo-300">Pregunta: {questionsAnswered + 1 > QUESTIONS_PER_LEVEL ? QUESTIONS_PER_LEVEL : questionsAnswered + 1}/{QUESTIONS_PER_LEVEL}</span>
                       <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> Tiempo</span>
                       <span>{timeLeft}s</span>
                     </div>
@@ -877,7 +877,19 @@ export default function App() {
                   <p className="text-xl text-white/90 mb-6 drop-shadow-sm">Llegaste al Nivel {level}</p>
                   
                   <div className="bg-black/20 rounded-3xl p-6 mb-8 border border-white/10 shadow-inner">
-                    <div className="text-sm text-white/70 uppercase tracking-widest mb-1 font-semibold">Puntuación Final</div>
+                    <div className="flex justify-center gap-2 mb-4">
+                      {[...Array(3)].map((_, i) => {
+                        let starsEarned = 0;
+                        if (correctAnswers === 20) starsEarned = 3;
+                        else if (correctAnswers >= 18) starsEarned = 2;
+                        else if (correctAnswers >= 16) starsEarned = 1;
+                        return (
+                          <Star key={i} className={`w-12 h-12 ${i < starsEarned ? 'text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]' : 'text-slate-600'}`} fill={i < starsEarned ? "currentColor" : "none"} />
+                        );
+                      })}
+                    </div>
+                    <div className="text-xl font-bold mb-4">¡{correctAnswers} correctas de {QUESTIONS_PER_LEVEL}!</div>
+                    <div className="text-sm text-white/70 uppercase tracking-widest mb-1 font-semibold">Puntuación Total</div>
                     <div className="text-6xl font-black text-yellow-300 drop-shadow-[0_0_15px_rgba(253,224,71,0.4)]">{score}</div>
                   </div>
 
