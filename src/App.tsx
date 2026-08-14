@@ -37,7 +37,8 @@ export default function App() {
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(MAX_LIVES);
   const [level, setLevel] = useState(1);
-  const [streak, setStreak] = useState(0);
+  const [questionsAnswered, setQuestionsAnswered] = useState(0);
+  const [correctAnswers, setCorrectAnswers] = useState(0);
   const [timeLimit, setTimeLimit] = useState(7);
   const [timeLeft, setTimeLeft] = useState(timeLimit);
   const [question, setQuestion] = useState<Question | null>(null);
@@ -205,19 +206,17 @@ export default function App() {
   const selectGame = async (gameId: string) => {
     setActiveGameId(gameId);
     let maxReached = 1;
-    if (currentUser) {
-      try {
-        const scoresRef = collection(db, 'scores');
-        const q = query(scoresRef, where('username', '==', currentUser), where('gameId', '==', gameId));
-        const qs = await getDocs(q);
-        qs.forEach(doc => {
-          const l = doc.data().level || 1;
-          if (l > maxReached) maxReached = l;
-        });
-      } catch(e) { console.error(e); }
+    
+    if (progress?.[gameId]) {
+      const levels = Object.keys(progress[gameId]).map(Number);
+      if (levels.length > 0) {
+        const maxCleared = Math.max(...levels.filter(l => progress[gameId][l] >= 1));
+        if (maxCleared >= 1) maxReached = maxCleared + 1;
+      }
     }
-    setMaxLevel(Math.min(10, maxReached));
-    setSelectedLevel(Math.min(10, maxReached));
+    
+    setMaxLevel(Math.min(5, maxReached));
+    setSelectedLevel(Math.min(5, maxReached));
     setGameState('start');
   };
 
@@ -227,7 +226,8 @@ export default function App() {
     setScore(0);
     setLives(MAX_LIVES);
     setLevel(selectedLevel);
-    setStreak(0);
+    setQuestionsAnswered(0);
+    setCorrectAnswers(0);
     historyRef.current = new Set();
     nextQuestion(selectedLevel);
   };
@@ -253,62 +253,64 @@ export default function App() {
     const correct = String(answer) === String(question.answer);
     setIsCorrect(correct);
     
+    let currentCorrect = correctAnswers;
     if (correct) {
       sounds.playCorrect();
-      setScore(s => Math.min(1000, s + 10 * level));
-      const newStreak = streak + 1;
-      setStreak(newStreak);
-      
-      if (newStreak >= QUESTIONS_PER_LEVEL) {
-        sounds.playLevelUp();
-        setGameState('level_complete');
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 }
-        });
-        
-        if (currentUser) {
-          const cappedScore = Math.min(1000, score + 10 * level);
-          addDoc(collection(db, 'scores'), {
-            username: currentUser,
-            gameId: activeGame.id,
-            score: cappedScore,
-            level: level + 1,
-            date: new Date().toISOString()
-          }).catch(err => console.error('Error saving score to Firebase:', err));
-        }
-      }
+      setScore(s => s + 10 * level);
+      currentCorrect += 1;
+      setCorrectAnswers(currentCorrect);
     } else {
       sounds.playWrong();
-      setLives(l => {
-        const newLives = l - 1;
-        if (newLives <= 0) {
-          sounds.playGameOver();
-          setGameState('gameover');
-          
-          if (currentUser) {
-            const cappedScore = Math.min(1000, score);
-            addDoc(collection(db, 'scores'), {
-              username: currentUser,
-              gameId: activeGame.id,
-              score: cappedScore,
-              level: level,
-              date: new Date().toISOString()
-            }).catch(err => console.error('Error saving score to Firebase:', err));
-          }
-        }
-        return newLives;
-      });
-      setStreak(0);
     }
     
-    if (lives > 1 || correct) {
+    const newQuestionsAnswered = questionsAnswered + 1;
+    setQuestionsAnswered(newQuestionsAnswered);
+    
+    let isGameOver = false;
+    let newLives = lives;
+    if (!correct) {
+      setLives(l => {
+        const updated = l - 1;
+        if (updated <= 0) {
+          isGameOver = true;
+          sounds.playGameOver();
+          setGameState('gameover');
+        }
+        return updated;
+      });
+      newLives -= 1;
+    }
+    
+    if (!isGameOver && newLives > 0) {
       setTimeout(() => {
-        nextQuestion(correct && streak + 1 >= QUESTIONS_PER_LEVEL ? level + 1 : level);
+        if (newQuestionsAnswered >= QUESTIONS_PER_LEVEL) {
+          sounds.playLevelUp();
+          setGameState('level_complete');
+          confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+          
+          let stars = 0;
+          if (currentCorrect === 20) stars = 3;
+          else if (currentCorrect >= 18) stars = 2;
+          else if (currentCorrect >= 16) stars = 1;
+          
+          if (stars > 0 && activeGame) {
+            setProgress(prev => {
+              const nextProgress = { ...(prev || {}) };
+              if (!nextProgress[activeGame.id]) nextProgress[activeGame.id] = {};
+              const prevStars = nextProgress[activeGame.id]?.[level] || 0;
+              if (stars > prevStars) {
+                nextProgress[activeGame.id][level] = stars;
+                localStorage.setItem('calculo_mental_progress', JSON.stringify(nextProgress));
+              }
+              return nextProgress;
+            });
+          }
+        } else {
+          nextQuestion(level);
+        }
       }, 1000);
     }
-  }, [question, selectedAnswer, level, streak, lives, nextQuestion, activeGame, currentUser, score]);
+  }, [question, selectedAnswer, level, questionsAnswered, correctAnswers, lives, nextQuestion, activeGame, currentUser, score, progress]);
 
   useEffect(() => {
     if (gameState === 'playing' && selectedAnswer === null) {
@@ -896,7 +898,7 @@ export default function App() {
                         );
                       })}
                     </div>
-                    <div className="text-xl font-bold mb-4">¡{correctAnswers} correctas de {QUESTIONS_PER_LEVEL}!</div>
+                    <div className="text-xl font-bold mb-4 text-white">¡{correctAnswers} correctas de {QUESTIONS_PER_LEVEL}!</div>
                     <div className="text-sm text-white/70 uppercase tracking-widest mb-1 font-semibold">Puntuación Total</div>
                     <div className="text-6xl font-black text-yellow-300 drop-shadow-[0_0_15px_rgba(253,224,71,0.4)]">{score}</div>
                   </div>
@@ -945,7 +947,7 @@ export default function App() {
                       onClick={() => {
                         const nextLevelNum = level + 1;
                         setLevel(nextLevelNum);
-                        setStreak(0);
+                        setQuestionsAnswered(0); setCorrectAnswers(0);
                         historyRef.current = new Set();
                         setGameState('playing');
                         nextQuestion(nextLevelNum);
