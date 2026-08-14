@@ -16,7 +16,7 @@ const MAX_LIVES = 5;
 const QUESTIONS_PER_LEVEL = 20;
 
 export default function App() {
-  const [gameState, setGameState] = useState<GameState>('auth');
+  const [gameState, setGameState] = useState<GameState>('menu');
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string>('student');
@@ -151,7 +151,7 @@ export default function App() {
   const handleLogout = () => {
     localStorage.removeItem('calculo_mental_user');
     setCurrentUser(null);
-    setGameState('auth');
+    setGameState('menu');
   };
 
   const saveTimeLimit = (newTime: number) => {
@@ -717,15 +717,16 @@ export default function App() {
                   <div className="bg-black/20 rounded-2xl p-4 mb-6 backdrop-blur-sm border border-white/10">
                     <h3 className="text-sm font-bold uppercase tracking-wider text-white/80 mb-3">Nivel a jugar</h3>
                     <div className="grid grid-cols-5 gap-2">
-                      {[...Array(10)].map((_, i) => {
+                      {[...Array(5)].map((_, i) => {
                         const levelNum = i + 1;
                         const isUnlocked = levelNum <= maxLevel;
+                        const starsEarned = activeGame && progress[activeGame.id] && progress[activeGame.id][levelNum] ? progress[activeGame.id][levelNum] : 0;
                         return (
                           <button
                             key={levelNum}
                             disabled={!isUnlocked}
                             onClick={() => setSelectedLevel(levelNum)}
-                            className={`py-2 rounded-xl font-bold transition-all ${
+                            className={`py-2 rounded-xl font-bold transition-all flex flex-col items-center justify-center gap-1 ${
                               selectedLevel === levelNum 
                                 ? 'bg-white text-indigo-900 shadow-lg scale-110' 
                                 : isUnlocked 
@@ -733,7 +734,14 @@ export default function App() {
                                   : 'bg-black/10 text-white/30 cursor-not-allowed'
                             }`}
                           >
-                            {levelNum}
+                            <span>{levelNum}</span>
+                            {isUnlocked && (
+                              <div className="flex gap-0.5 mt-1">
+                                {[...Array(3)].map((_, s) => (
+                                  <Star key={s} className={`w-3 h-3 ${s < starsEarned ? (selectedLevel === levelNum ? 'text-indigo-600' : 'text-yellow-400') : 'text-transparent'}`} fill="currentColor" />
+                                ))}
+                              </div>
+                            )}
                           </button>
                         );
                       })}
