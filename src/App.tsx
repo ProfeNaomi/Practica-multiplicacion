@@ -215,32 +215,23 @@ export default function App() {
 
   const selectGame = async (gameId: string) => {
     setActiveGameId(gameId);
-    let maxReached = 1;
-    
-    if (progress?.[gameId]) {
-      const levels = Object.keys(progress[gameId]).map(Number);
-      if (levels.length > 0) {
-        const maxCleared = Math.max(...levels.filter(l => progress[gameId][l] >= 1));
-        if (maxCleared >= 1) maxReached = maxCleared + 1;
-      }
-    }
-    
-    setMaxLevel(Math.min(5, maxReached));
-    setSelectedLevel(Math.min(5, maxReached));
-    setGameState('start');
-  };
-
-  const startGame = () => {
-    sounds.init();
-    setGameState('playing');
+    setLevel(1);
     setScore(0);
     setLives(MAX_LIVES);
-    setLevel(selectedLevel);
     setQuestionsAnswered(0);
     setCorrectAnswers(0);
     historyRef.current = new Set();
-    nextQuestion(selectedLevel);
+    setGameState('playing');
+    const active = games.find(g => g.id === gameId);
+    if (active) {
+      setQuestion(active.generateQuestion(1, historyRef.current));
+      setTimeLeft(7);
+      setSelectedAnswer(null);
+      setIsCorrect(null);
+    }
   };
+
+  
 
   const backToMenu = () => {
     setGameState('menu');
@@ -293,28 +284,11 @@ export default function App() {
     
     if (!isGameOver && newLives > 0) {
       setTimeout(() => {
-        if (newQuestionsAnswered >= QUESTIONS_PER_LEVEL) {
+        if (newQuestionsAnswered > 0 && newQuestionsAnswered % 10 === 0) {
           sounds.playLevelUp();
-          setGameState('level_complete');
-          confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-          
-          let stars = 0;
-          if (currentCorrect === 20) stars = 3;
-          else if (currentCorrect >= 18) stars = 2;
-          else if (currentCorrect >= 16) stars = 1;
-          
-          if (stars > 0 && activeGame) {
-            setProgress(prev => {
-              const nextProgress = { ...(prev || {}) };
-              if (!nextProgress[activeGame.id]) nextProgress[activeGame.id] = {};
-              const prevStars = nextProgress[activeGame.id]?.[level] || 0;
-              if (stars > prevStars) {
-                nextProgress[activeGame.id][level] = stars;
-                localStorage.setItem('calculo_mental_progress', JSON.stringify(nextProgress));
-              }
-              return nextProgress;
-            });
-          }
+          const nextLevel = level + 1;
+          setLevel(nextLevel);
+          nextQuestion(nextLevel);
         } else {
           nextQuestion(level);
         }
@@ -761,7 +735,7 @@ export default function App() {
                   </div>
 
                   <button
-                    onClick={startGame}
+                    onClick={() => activeGame && selectGame(activeGame.id)}
                     className="w-full py-4 bg-white/20 hover:bg-white/30 border border-white/40 text-white rounded-2xl font-bold text-xl shadow-lg transform transition active:scale-95 flex items-center justify-center gap-2"
                   >
                     <Play className="w-6 h-6" fill="currentColor" />
@@ -897,18 +871,8 @@ export default function App() {
                   <p className="text-xl text-white/90 mb-6 drop-shadow-sm">Llegaste al Nivel {level}</p>
                   
                   <div className="bg-black/20 rounded-3xl p-6 mb-8 border border-white/10 shadow-inner">
-                    <div className="flex justify-center gap-2 mb-4">
-                      {[...Array(3)].map((_, i) => {
-                        let starsEarned = 0;
-                        if (correctAnswers === 20) starsEarned = 3;
-                        else if (correctAnswers >= 18) starsEarned = 2;
-                        else if (correctAnswers >= 16) starsEarned = 1;
-                        return (
-                          <Star key={i} className={`w-12 h-12 ${i < starsEarned ? 'text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]' : 'text-slate-600'}`} fill={i < starsEarned ? "currentColor" : "none"} />
-                        );
-                      })}
-                    </div>
-                    <div className="text-xl font-bold mb-4 text-white">¡{correctAnswers} correctas de {QUESTIONS_PER_LEVEL}!</div>
+                    
+                    <div className="text-xl font-bold mb-4 text-white">¡{correctAnswers} respuestas correctas en total!</div>
                     <div className="text-sm text-white/70 uppercase tracking-widest mb-1 font-semibold">Puntuación Total</div>
                     <div className="text-6xl font-black text-yellow-300 drop-shadow-[0_0_15px_rgba(253,224,71,0.4)]">{score}</div>
                   </div>
@@ -932,52 +896,7 @@ export default function App() {
                 </motion.div>
               )}
 
-              {gameState === 'level_complete' && (
-                <motion.div
-                  key="level_complete"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="p-8 text-center"
-                >
-                  <div className="mb-6 flex justify-center">
-                    <div className="w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center">
-                      <Trophy className="w-12 h-12 text-green-400" fill="currentColor" />
-                    </div>
-                  </div>
-                  <h2 className="text-4xl font-bold mb-2 drop-shadow-md text-green-300">¡Nivel Superado!</h2>
-                  <p className="text-xl text-white/90 mb-6 drop-shadow-sm">Has completado el Nivel {level} con éxito.</p>
-                  
-                  <div className="bg-black/20 rounded-3xl p-6 mb-8 border border-white/10 shadow-inner">
-                    <div className="text-sm text-white/70 uppercase tracking-widest mb-1 font-semibold">Puntuación Actual</div>
-                    <div className="text-6xl font-black text-yellow-300 drop-shadow-[0_0_15px_rgba(253,224,71,0.4)]">{score}</div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <button
-                      onClick={() => {
-                        const nextLevelNum = level + 1;
-                        setLevel(nextLevelNum);
-                        setQuestionsAnswered(0); setCorrectAnswers(0);
-                        historyRef.current = new Set();
-                        setGameState('playing');
-                        nextQuestion(nextLevelNum);
-                      }}
-                      className="w-full py-4 bg-white text-slate-800 hover:bg-gray-100 rounded-2xl font-bold text-xl shadow-xl transform transition active:scale-95 flex items-center justify-center gap-2"
-                    >
-                      <Play className="w-6 h-6" fill="currentColor" />
-                      Siguiente Nivel
-                    </button>
-                    <button
-                      onClick={backToMenu}
-                      className="w-full py-4 bg-black/20 hover:bg-black/30 border border-white/30 text-white rounded-2xl font-bold text-xl shadow-lg transform transition active:scale-95 flex items-center justify-center gap-2"
-                    >
-                      <ArrowLeft className="w-6 h-6" />
-                      Menú Principal
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+              </AnimatePresence>
           </div>
         </div>
       )}

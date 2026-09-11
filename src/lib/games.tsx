@@ -884,13 +884,13 @@ export const games: GameDef[] = [
         component: (
           <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-4 my-2">
             <div className="flex flex-col items-center">
-              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">${n1}</span>
-              <span className="px-3 pt-2 leading-none">${d1}</span>
+              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">{n1}</span>
+              <span className="px-3 pt-2 leading-none">{d1}</span>
             </div>
             <span>+</span>
             <div className="flex flex-col items-center">
-              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">${n2}</span>
-              <span className="px-3 pt-2 leading-none">${d2}</span>
+              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">{n2}</span>
+              <span className="px-3 pt-2 leading-none">{d2}</span>
             </div>
           </div>
         ),
@@ -932,13 +932,13 @@ export const games: GameDef[] = [
         component: (
           <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-4 my-2">
             <div className="flex flex-col items-center">
-              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">${n1}</span>
-              <span className="px-3 pt-2 leading-none">${d1}</span>
+              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">{n1}</span>
+              <span className="px-3 pt-2 leading-none">{d1}</span>
             </div>
             <span>-</span>
             <div className="flex flex-col items-center">
-              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">${n2}</span>
-              <span className="px-3 pt-2 leading-none">${d2}</span>
+              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">{n2}</span>
+              <span className="px-3 pt-2 leading-none">{d2}</span>
             </div>
           </div>
         ),
@@ -976,13 +976,13 @@ export const games: GameDef[] = [
         component: (
           <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-4 my-2">
             <div className="flex flex-col items-center">
-              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">${n1}</span>
-              <span className="px-3 pt-2 leading-none">${d1}</span>
+              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">{n1}</span>
+              <span className="px-3 pt-2 leading-none">{d1}</span>
             </div>
             <span>×</span>
             <div className="flex flex-col items-center">
-              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">${n2}</span>
-              <span className="px-3 pt-2 leading-none">${d2}</span>
+              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">{n2}</span>
+              <span className="px-3 pt-2 leading-none">{d2}</span>
             </div>
           </div>
         ),
@@ -1020,13 +1020,13 @@ export const games: GameDef[] = [
         component: (
           <div className="flex items-center justify-center text-5xl font-black drop-shadow-xl gap-4 my-2">
             <div className="flex flex-col items-center">
-              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">${n1}</span>
-              <span className="px-3 pt-2 leading-none">${d1}</span>
+              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">{n1}</span>
+              <span className="px-3 pt-2 leading-none">{d1}</span>
             </div>
             <span>÷</span>
             <div className="flex flex-col items-center">
-              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">${n2}</span>
-              <span className="px-3 pt-2 leading-none">${d2}</span>
+              <span className="border-b-[4px] border-white/90 px-3 pb-1 leading-none">{n2}</span>
+              <span className="px-3 pt-2 leading-none">{d2}</span>
             </div>
           </div>
         ),
