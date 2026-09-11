@@ -58,7 +58,7 @@ export default function App() {
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
 
   const timerRef = useRef<number | null>(null);
-  const historyRef = useRef<Set<number>>(new Set());
+  const historyRef = useRef<Set<string>>(new Set());
 
   const activeGame = activeGameId ? games.find(g => g.id === activeGameId) : null;
 
@@ -224,7 +224,16 @@ export default function App() {
     setGameState('playing');
     const active = games.find(g => g.id === gameId);
     if (active) {
-      setQuestion(active.generateQuestion(1, historyRef.current));
+      let q;
+      let attempts = 0;
+      let key = '';
+      do {
+        q = active.generateQuestion(1, historyRef.current);
+        key = q.text || String(q.answer) + JSON.stringify(q.options);
+        attempts++;
+      } while (historyRef.current.has(key) && attempts < 50);
+      historyRef.current.add(key);
+      setQuestion(q);
       setTimeLeft(7);
       setSelectedAnswer(null);
       setIsCorrect(null);
@@ -240,8 +249,18 @@ export default function App() {
   };
 
   const nextQuestion = useCallback((currentLevel: number) => {
-    if (!activeGame) return;
-    setQuestion(activeGame.generateQuestion(currentLevel, historyRef.current));
+      if (!activeGame) return;
+      let q;
+      let attempts = 0;
+      let key = '';
+      do {
+        q = activeGame.generateQuestion(currentLevel, historyRef.current);
+        key = q.text || String(q.answer) + JSON.stringify(q.options);
+        attempts++;
+      } while (historyRef.current.has(key) && attempts < 50);
+      
+      historyRef.current.add(key);
+      setQuestion(q);
     setTimeLeft(timeLimit);
     setSelectedAnswer(null);
     setIsCorrect(null);

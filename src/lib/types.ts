@@ -14,5 +14,5 @@ export interface GameDef {
   icon: React.ElementType;
   gradient: string;
   category: 'Números Naturales' | 'Números Enteros' | 'Números Racionales' | 'ÁÁlgebra';
-  generateQuestion: (level: number, history: Set<number>) => Question;
+  generateQuestion: (level: number, history: Set<string>) => Question;
 }
