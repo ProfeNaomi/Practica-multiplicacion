@@ -27,11 +27,17 @@ const renderFraction = (n: number | string, d: number | string, extra?: string) 
 
 const generateNumOptions = (answer: number, variance: number, allowNegative: boolean = false): number[] => {
   const options = new Set<number>([answer]);
-  while (options.size < 4) {
+  let attempts = 0;
+  while (options.size < 4 && attempts++ < 100) {
     const wrong = answer + randomInt(-variance, variance) + (Math.random() > 0.5 ? 1 : -1);
     if (wrong !== answer && (allowNegative || wrong >= 0)) {
       options.add(wrong);
     }
+  }
+  let step = 1;
+  while (options.size < 4) {
+    const fallback = answer + step++;
+    if (allowNegative || fallback >= 0) options.add(fallback);
   }
   return shuffle(Array.from(options));
 };
@@ -186,9 +192,9 @@ export const games: GameDef[] = [
         b = randomInt(2, Math.min(10 + level, 20));
         product = a * b;
         attempts++;
-      } while (history.has(product) && attempts < 10);
+      } while (history.has(String(product)) && attempts < 10);
       
-      history.add(product);
+      history.add(String(product));
       const answerStr = `${a} × ${b}`;
       
       const options = new Set<string>([answerStr]);
@@ -362,11 +368,18 @@ export const games: GameDef[] = [
       const denoms = [2, 4, 5, 8, 10];
       const d = denoms[randomInt(0, Math.min(level + 1, denoms.length - 1))];
       const n = randomInt(1, d - 1);
-      const answer = n / d;
+      const answer = parseFloat((n / d).toFixed(3));
       const options = new Set<number>([answer]);
-      while(options.size < 4) {
-        let wrong = (randomInt(1, d-1) / d) + (Math.random() > 0.5 ? 0 : 0.1);
-        if (wrong !== answer && wrong > 0) options.add(parseFloat(wrong.toFixed(3)));
+      let attempts = 0;
+      while (options.size < 4 && attempts++ < 100) {
+        const altD = denoms[randomInt(0, denoms.length - 1)];
+        const altN = randomInt(1, altD - 1);
+        const wrong = parseFloat((altN / altD).toFixed(3));
+        if (wrong !== answer && wrong > 0) options.add(wrong);
+      }
+      let step = 1;
+      while (options.size < 4) {
+        options.add(parseFloat((answer + (step++ * 0.1)).toFixed(3)));
       }
       return { component: renderFraction(n, d), answer, options: shuffle(Array.from(options)) };
     }
@@ -388,12 +401,17 @@ export const games: GameDef[] = [
       const answer = `${n/g}/${d/g}`;
       
       const options = new Set<string>([answer]);
-      while(options.size < 4) {
+      let attempts = 0;
+      while (options.size < 4 && attempts++ < 100) {
         let wd = denoms[randomInt(0, denoms.length - 1)];
         let wn = randomInt(1, wd - 1);
         let wg = gcd(wn, wd);
         let wrong = `${wn/wg}/${wd/wg}`;
         if (wrong !== answer) options.add(wrong);
+      }
+      let step = 1;
+      while (options.size < 4) {
+        options.add(`${step++}/10`);
       }
       return { text: dec.toString(), answer, options: shuffle(Array.from(options)) };
     }
@@ -431,11 +449,16 @@ export const games: GameDef[] = [
       const answer = `${p/g}/${100/g}`;
       
       const options = new Set<string>([answer]);
-      while(options.size < 4) {
+      let attempts = 0;
+      while (options.size < 4 && attempts++ < 100) {
         let wp = randomInt(1, 19) * 5;
         let wg = gcd(wp, 100);
         let wrong = `${wp/wg}/${100/wg}`;
         if (wrong !== answer) options.add(wrong);
+      }
+      let step = 1;
+      while (options.size < 4) {
+        options.add(`${step++}/20`);
       }
       return { text: `${p}%`, component: (
         <div className="text-5xl font-black mb-4 drop-shadow-xl">{p}% = ?</div>
@@ -588,9 +611,14 @@ export const games: GameDef[] = [
           const e = base === 0.1 || base === 0.2 || base === 0.5 ? randomInt(2, 3) : 2;
           const answer = Number(Math.pow(base, e).toFixed(3));
           const options = new Set<number>([answer]);
-          while(options.size < 4) {
+          let attempts = 0;
+          while (options.size < 4 && attempts++ < 100) {
             const wrong = Number((answer + randomInt(-5, 5) * (e===2? 0.01 : 0.001)).toFixed(3));
             if (wrong !== answer && wrong > 0) options.add(wrong);
+          }
+          let step = 1;
+          while (options.size < 4) {
+            options.add(Number((answer + (step++ * 0.05)).toFixed(3)));
           }
           return {
             component: (
@@ -706,7 +734,8 @@ export const games: GameDef[] = [
         wrongOptions = [
           `x² + ${a*a}`, 
           `x² + ${a}x + ${a*a}`, 
-          `x² + ${2*a}x + ${2*a}`
+          `x² + ${2*a}x - ${a*a}`,
+          `x² + ${2*a + 2}x + ${a*a}`
         ];
       } else if (type === 2) {
         // (x - a)^2
@@ -715,7 +744,8 @@ export const games: GameDef[] = [
         wrongOptions = [
           `x² - ${a*a}`, 
           `x² + ${2*a}x + ${a*a}`, 
-          `x² - ${a}x + ${a*a}`
+          `x² - ${a}x + ${a*a}`,
+          `x² - ${2*a}x - ${a*a}`
         ];
       } else if (type === 3) {
         // (x + a)(x - a)
@@ -723,8 +753,9 @@ export const games: GameDef[] = [
         answer = `x² - ${a*a}`;
         wrongOptions = [
           `x² + ${a*a}`, 
-          `x² - ${2*a}`, 
-          `x² - ${a}x - ${a*a}`
+          `x² - ${2*a}x`, 
+          `x² - ${a}x - ${a*a}`,
+          `x² - ${a*a + 1}`
         ];
       } else {
         // (x + a)(x + b)
@@ -732,18 +763,25 @@ export const games: GameDef[] = [
         answer = `x² + ${a+b}x + ${a*b}`;
         wrongOptions = [
           `x² + ${a*b}x + ${a+b}`, 
-          `x² + ${Math.abs(a-b)}x + ${a*b}`, 
-          `x² + ${a+b}x + ${a+b}`
+          `x² + ${a+b+1}x + ${a*b}`, 
+          `x² - ${a+b}x + ${a*b}`,
+          `x² + ${a*b}`
         ];
       }
       
       const options = new Set<string>([answer]);
-      wrongOptions.forEach(w => options.add(w));
+      wrongOptions.forEach(w => {
+        if (w !== answer && options.size < 4) options.add(w);
+      });
+      let step = 1;
+      while (options.size < 4) {
+        options.add(`x² + ${step++}x + 1`);
+      }
       
       return {
         text,
         answer,
-        options: shuffle(Array.from(options)).slice(0, 4)
+        options: shuffle(Array.from(options))
       };
     }
   }

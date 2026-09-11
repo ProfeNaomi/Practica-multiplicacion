@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Heart, Star, Clock, Trophy, Play, RotateCcw, ArrowLeft, LogOut, ListOrdered, X, Settings, Users, Search } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -234,13 +234,17 @@ export default function App() {
       } while (historyRef.current.has(key) && attempts < 50);
       historyRef.current.add(key);
       setQuestion(q);
-      setTimeLeft(7);
+      setTimeLeft(timeLimit);
       setSelectedAnswer(null);
       setIsCorrect(null);
     }
   };
 
-  
+  const startGame = () => {
+    if (activeGame) {
+      selectGame(activeGame.id);
+    }
+  };
 
   const backToMenu = () => {
     setGameState('menu');
@@ -249,18 +253,21 @@ export default function App() {
   };
 
   const nextQuestion = useCallback((currentLevel: number) => {
-      if (!activeGame) return;
-      let q;
-      let attempts = 0;
-      let key = '';
-      do {
-        q = activeGame.generateQuestion(currentLevel, historyRef.current);
-        key = q.text || String(q.answer) + JSON.stringify(q.options);
-        attempts++;
-      } while (historyRef.current.has(key) && attempts < 50);
-      
-      historyRef.current.add(key);
-      setQuestion(q);
+    if (!activeGame) return;
+    if (historyRef.current.size > 50) {
+      historyRef.current.clear();
+    }
+    let q;
+    let attempts = 0;
+    let key = '';
+    do {
+      q = activeGame.generateQuestion(currentLevel, historyRef.current);
+      key = q.text || String(q.answer) + JSON.stringify(q.options);
+      attempts++;
+    } while (historyRef.current.has(key) && attempts < 50);
+    
+    historyRef.current.add(key);
+    setQuestion(q);
     setTimeLeft(timeLimit);
     setSelectedAnswer(null);
     setIsCorrect(null);
@@ -286,22 +293,25 @@ export default function App() {
     const newQuestionsAnswered = questionsAnswered + 1;
     setQuestionsAnswered(newQuestionsAnswered);
     
-    let isGameOver = false;
-    let newLives = lives;
     if (!correct) {
-      setLives(l => {
-        const updated = l - 1;
-        if (updated <= 0) {
-          isGameOver = true;
-          sounds.playGameOver();
-          setGameState('gameover');
-        }
-        return updated;
-      });
-      newLives -= 1;
-    }
-    
-    if (!isGameOver && newLives > 0) {
+      const updatedLives = lives - 1;
+      setLives(updatedLives);
+      if (updatedLives <= 0) {
+        sounds.playGameOver();
+        setGameState('gameover');
+      } else {
+        setTimeout(() => {
+          if (newQuestionsAnswered > 0 && newQuestionsAnswered % 10 === 0) {
+            sounds.playLevelUp();
+            const nextLevel = level + 1;
+            setLevel(nextLevel);
+            nextQuestion(nextLevel);
+          } else {
+            nextQuestion(level);
+          }
+        }, 1000);
+      }
+    } else {
       setTimeout(() => {
         if (newQuestionsAnswered > 0 && newQuestionsAnswered % 10 === 0) {
           sounds.playLevelUp();
@@ -690,79 +700,10 @@ export default function App() {
         <TeacherDashboard onBack={() => setGameState('menu')} />
       )}
 
-      {['start', 'playing', 'gameover'].includes(gameState) && activeGame && (
+      {['playing', 'gameover'].includes(gameState) && activeGame && (
         <div className="max-w-4xl w-full">
           <div className={`max-w-md mx-auto w-full bg-gradient-to-br ${activeGame.gradient} rounded-3xl shadow-2xl overflow-hidden border border-white/20 transition-colors duration-500`}>
             <AnimatePresence mode="wait">
-              {gameState === 'start' && (
-                <motion.div
-                  key="start"
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -50 }}
-                  className="p-8 text-center"
-                >
-                  <button 
-                    onClick={backToMenu}
-                    className="absolute top-6 left-6 p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
-                  >
-                    <ArrowLeft className="w-6 h-6" />
-                  </button>
-                  
-                  <div className="mb-8 flex justify-center mt-4">
-                    <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center shadow-inner">
-                      <activeGame.icon className="w-12 h-12 text-white" />
-                    </div>
-                  </div>
-                  <h1 className="text-4xl font-bold mb-4 tracking-tight drop-shadow-md">{activeGame.title}</h1>
-                  <p className="text-lg text-white/90 mb-4 drop-shadow-sm leading-snug">
-                    {activeGame.description}
-                  </p>
-                  
-                  <div className="bg-black/20 rounded-2xl p-4 mb-6 backdrop-blur-sm border border-white/10">
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-white/80 mb-3">Nivel a jugar</h3>
-                    <div className="grid grid-cols-5 gap-2">
-                      {[...Array(5)].map((_, i) => {
-                        const levelNum = i + 1;
-                        const isUnlocked = levelNum <= maxLevel;
-                        const starsEarned = activeGame && progress?.[activeGame.id]?.[levelNum] ? progress[activeGame.id][levelNum] : 0;
-                        return (
-                          <button
-                            key={levelNum}
-                            disabled={!isUnlocked}
-                            onClick={() => setSelectedLevel(levelNum)}
-                            className={`py-2 rounded-xl font-bold transition-all flex flex-col items-center justify-center gap-1 ${
-                              selectedLevel === levelNum 
-                                ? 'bg-white text-indigo-900 shadow-lg scale-110' 
-                                : isUnlocked 
-                                  ? 'bg-white/20 hover:bg-white/30 text-white' 
-                                  : 'bg-black/10 text-white/30 cursor-not-allowed'
-                            }`}
-                          >
-                            <span>{levelNum}</span>
-                            {isUnlocked && (
-                              <div className="flex gap-0.5 mt-1">
-                                {[...Array(3)].map((_, s) => (
-                                  <Star key={s} className={`w-3 h-3 ${s < starsEarned ? (selectedLevel === levelNum ? 'text-indigo-600' : 'text-yellow-400') : 'text-transparent'}`} fill="currentColor" />
-                                ))}
-                              </div>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => activeGame && selectGame(activeGame.id)}
-                    className="w-full py-4 bg-white/20 hover:bg-white/30 border border-white/40 text-white rounded-2xl font-bold text-xl shadow-lg transform transition active:scale-95 flex items-center justify-center gap-2"
-                  >
-                    <Play className="w-6 h-6" fill="currentColor" />
-                    ¡Jugar Ahora!
-                  </button>
-                </motion.div>
-              )}
-
               {gameState === 'playing' && question && (
                 <motion.div
                   key="playing"
@@ -806,7 +747,7 @@ export default function App() {
 
                   <div className="mb-8 pl-1 pr-1">
                     <div className="flex justify-between text-sm font-medium mb-2 opacity-90">
-                      <span className="flex items-center gap-1 font-bold text-indigo-300">Pregunta: {questionsAnswered + 1 > QUESTIONS_PER_LEVEL ? QUESTIONS_PER_LEVEL : questionsAnswered + 1}/{QUESTIONS_PER_LEVEL}</span>
+                      <span className="flex items-center gap-1 font-bold text-indigo-300">Pregunta #{questionsAnswered + 1}</span>
                       <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> Tiempo</span>
                       <span>{timeLeft}s</span>
                     </div>
@@ -823,7 +764,7 @@ export default function App() {
                   <div className="text-center mb-8 min-h-[140px] flex flex-col items-center justify-center">
                     {question.component ? (
                       <motion.div
-                        key={`comp-${level}-${streak}`}
+                        key={`comp-${level}-${questionsAnswered}`}
                         initial={{ y: -20, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         className="flex flex-col items-center justify-center w-full"

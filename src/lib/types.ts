@@ -13,6 +13,6 @@ export interface GameDef {
   description: string;
   icon: React.ElementType;
   gradient: string;
-  category: 'Números Naturales' | 'Números Enteros' | 'Números Racionales' | 'ÁÁlgebra';
+  category: 'Números Naturales' | 'Números Enteros' | 'Números Racionales' | 'Álgebra';
   generateQuestion: (level: number, history: Set<string>) => Question;
 }
